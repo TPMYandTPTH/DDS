@@ -3,73 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JD Splitter - TP Internal Tool</title>
+    <title>DDS - Document Divider System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
     <link rel="icon" href="TPLogo11.png" type="image/png">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --dark-color: #1a252f;
+            --light-color: #f8f9fa;
+            --gray-color: #6c757d;
+            --white: #fff;
+            --black: #212529;
+            --section-bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background-color: var(--light-color);
+            color: var(--black);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 600px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            padding-top: 20px;
+        }
+
+        .logo {
+            max-width: 180px;
+            height: auto;
+            filter: grayscale(100%);
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .logo:hover {
+            filter: grayscale(0%);
+            transform: scale(1.05);
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            margin-bottom: 1.2rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--secondary-color);
+        }
+
+        .form-control, .form-select {
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--dark-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--gray-color);
+            border-color: var(--gray-color);
+            transform: none;
+        }
+
+        footer {
+            background-color: var(--black);
+            color: var(--white);
+            padding: 2rem 0;
+            margin-top: auto;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px;
+            background-color: var(--light-color);
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-input-label:hover {
+            background-color: #e9ecef;
+            border-color: var(--secondary-color);
+        }
+
+        .result-section {
+            text-align: center;
+        }
+
+        .download-section {
+            margin: 30px 0;
+        }
+
+        .info-section {
+            margin-bottom: 30px;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .alert-container {
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .logo {
+                max-width: 140px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .btn {
+                padding: 10px 20px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container py-4">
         <div class="text-center mb-4">
             <img src="TPLogo11.png" alt="Company Logo" class="logo img-fluid">
-            <h1 class="mt-3">JD Splitter</h1>
+            <h1 class="mt-3">DDS</h1>
+            <p class="lead">Document Divider System</p>
             <p class="lead">Split your job descriptions into individual documents</p>
         </div>
 
         <div class="card shadow-sm">
             <div class="card-body p-4">
-                <div class="upload-section">
+                <!-- Upload Section -->
+                <div id="upload-section">
                     <h2 class="section-title">Upload Your Document</h2>
-                    <form action="/upload" method="post" enctype="multipart/form-data">
+                    <form id="upload-form" enctype="multipart/form-data">
                         <div class="file-input-wrapper">
-                            <input type="file" name="file" id="file" accept=".docx" required>
+                            <input type="file" name="file" id="file" accept=".docx,.docm" required>
                             <label for="file" class="file-input-label">
                                 <span id="file-name">Choose a file...</span>
                             </label>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Split Document</button>
+                        <button type="submit" class="btn btn-primary w-100" id="upload-btn">Split Document</button>
                     </form>
+                    
+                    <div class="progress-container">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                        </div>
+                        <p class="text-center mt-2">Processing your document...</p>
+                    </div>
+                    
+                    <div class="alert-container"></div>
+                    
+                    <div class="info-section">
+                        <h3 class="section-title">How it works:</h3>
+                        <ol>
+                            <li>Upload your Word document containing multiple job descriptions</li>
+                            <li>Our system will split it into individual 2-page documents</li>
+                            <li>Each document will be branded with the company logo and font</li>
+                            <li>Download all documents as a zip file</li>
+                        </ol>
+                    </div>
                 </div>
                 
-                <div class="info-section">
-                    <h3 class="section-title">How it works:</h3>
-                    <ol>
-                        <li>Upload your Word document containing multiple job descriptions</li>
-                        <li>Our system will split it into individual 2-page documents</li>
-                        <li>Each document will be branded with the company logo and font</li>
-                        <li>Download all documents as a zip file</li>
-                    </ol>
-                </div>
-
-                <!-- Social Media Links -->
-                <div class="mt-4">
-                    <div class="row text-center">
-                        <!-- Company Global -->
-                        <div class="col-md-4 mb-3">
-                            <h5>Company Global</h5>
-                            <div class="d-flex justify-content-center gap-3">
-                                <a href="#" class="social-icon linkedin"><i class="fab fa-linkedin"></i></a>
-                                <a href="#" class="social-icon youtube"><i class="fab fa-youtube"></i></a>
-                                <a href="#" class="social-icon tiktok"><i class="fab fa-tiktok"></i></a>
-                            </div>
-                        </div>
-                        <!-- Company Location 1 -->
-                        <div class="col-md-4 mb-3">
-                            <h5>Company Location 1</h5>
-                            <div class="d-flex justify-content-center gap-3">
-                                <a href="#" class="social-icon facebook"><i class="fab fa-facebook-f"></i></a>
-                                <a href="#" class="social-icon instagram"><i class="fab fa-instagram"></i></a>
-                            </div>
-                        </div>
-                        <!-- Company Location 2 -->
-                        <div class="col-md-4 mb-3">
-                            <h5>Company Location 2</h5>
-                            <div class="d-flex justify-content-center gap-3">
-                                <a href="#" class="social-icon facebook"><i class="fab fa-facebook-f"></i></a>
-                                <a href="#" class="social-icon instagram"><i class="fab fa-instagram"></i></a>
-                            </div>
-                        </div>
+                <!-- Result Section (Initially Hidden) -->
+                <div id="result-section" style="display: none;">
+                    <h2 class="section-title">Processing Complete!</h2>
+                    <p>Your document has been split into <strong id="file-count">0</strong> individual job descriptions.</p>
+                    
+                    <div class="download-section">
+                        <a href="#" id="download-link" class="btn btn-primary">
+                            <i class="fas fa-download me-2"></i> Download All Documents
+                        </a>
+                    </div>
+                    
+                    <div class="actions">
+                        <button id="new-file-btn" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Split Another Document
+                        </button>
                     </div>
                 </div>
             </div>
@@ -91,6 +272,109 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+            
+            const fileInput = document.getElementById('file');
+            const fileName = document.getElementById('file-name');
+            const uploadForm = document.getElementById('upload-form');
+            const uploadBtn = document.getElementById('upload-btn');
+            const progressContainer = document.querySelector('.progress-container');
+            const alertContainer = document.querySelector('.alert-container');
+            const uploadSection = document.getElementById('upload-section');
+            const resultSection = document.getElementById('result-section');
+            const fileCount = document.getElementById('file-count');
+            const downloadLink = document.getElementById('download-link');
+            const newFileBtn = document.getElementById('new-file-btn');
+            
+            // File input change handler
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length > 0) {
+                    fileName.textContent = fileInput.files[0].name;
+                } else {
+                    fileName.textContent = 'Choose a file...';
+                }
+            });
+            
+            // Form submission handler
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (fileInput.files.length === 0) {
+                    showAlert('Please select a file to upload.', 'danger');
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                if (!file.name.endsWith('.docx') && !file.name.endsWith('.docm')) {
+                    showAlert('Please upload a valid Word document (.docx or .docm)', 'danger');
+                    return;
+                }
+                
+                // Show progress
+                uploadBtn.disabled = true;
+                progressContainer.style.display = 'block';
+                alertContainer.innerHTML = '';
+                
+                // Create FormData
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Send file to server
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide progress
+                    progressContainer.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    
+                    if (data.success) {
+                        // Show result section
+                        fileCount.textContent = data.count;
+                        downloadLink.href = data.download_url;
+                        uploadSection.style.display = 'none';
+                        resultSection.style.display = 'block';
+                    } else {
+                        showAlert(data.message || 'An error occurred while processing your file.', 'danger');
+                    }
+                })
+                .catch(error => {
+                    // Hide progress
+                    progressContainer.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    showAlert('An error occurred while processing your file. Please try again.', 'danger');
+                    console.error('Error:', error);
+                });
+            });
+            
+            // New file button handler
+            newFileBtn.addEventListener('click', function() {
+                uploadSection.style.display = 'block';
+                resultSection.style.display = 'none';
+                fileInput.value = '';
+                fileName.textContent = 'Choose a file...';
+            });
+            
+            // Helper function to show alerts
+            function showAlert(message, type) {
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
+                alert.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                alertContainer.appendChild(alert);
+            }
+        });
+    </script>
 </body>
 </html>
