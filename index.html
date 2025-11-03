@@ -31,7 +31,7 @@
         }
 
         .container {
-            max-width: 600px;
+            max-width: 800px;
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -72,18 +72,6 @@
             border-bottom: 2px solid var(--secondary-color);
         }
 
-        .form-control, .form-select {
-            padding: 12px 15px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-        }
-
         .btn {
             padding: 12px 24px;
             border-radius: 8px;
@@ -104,21 +92,9 @@
             transform: translateY(-2px);
         }
 
-        .btn-primary:disabled {
+        .btn-secondary {
             background-color: var(--gray-color);
             border-color: var(--gray-color);
-            transform: none;
-        }
-
-        footer {
-            background-color: var(--black);
-            color: var(--white);
-            padding: 2rem 0;
-            margin-top: auto;
-        }
-
-        .upload-section {
-            margin-bottom: 30px;
         }
 
         .file-input-wrapper {
@@ -150,18 +126,6 @@
             border-color: var(--secondary-color);
         }
 
-        .result-section {
-            text-align: center;
-        }
-
-        .download-section {
-            margin: 30px 0;
-        }
-
-        .info-section {
-            margin-bottom: 30px;
-        }
-
         .progress-container {
             margin: 20px 0;
             display: none;
@@ -171,24 +135,44 @@
             margin-top: 20px;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            
-            .logo {
-                max-width: 140px;
-            }
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
-        @media (max-width: 576px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .btn {
-                padding: 10px 20px;
-            }
+        .structure-info {
+            background-color: #e3f2fd;
+            border-left: 4px solid var(--secondary-color);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        footer {
+            background-color: var(--black);
+            color: var(--white);
+            padding: 2rem 0;
+            margin-top: auto;
+        }
+
+        .tab-content {
+            margin-top: 20px;
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--primary-color);
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--secondary-color);
+            font-weight: bold;
         }
     </style>
 </head>
@@ -203,54 +187,80 @@
 
         <div class="card shadow-sm">
             <div class="card-body p-4">
-                <!-- Upload Section -->
-                <div id="upload-section">
-                    <h2 class="section-title">Upload Your Document</h2>
-                    <form id="upload-form" enctype="multipart/form-data">
-                        <div class="file-input-wrapper">
-                            <input type="file" name="file" id="file" accept=".docx,.docm" required>
-                            <label for="file" class="file-input-label">
-                                <span id="file-name">Choose a file...</span>
-                            </label>
+                <!-- Tabs -->
+                <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="split-tab" data-bs-toggle="tab" data-bs-target="#split" type="button" role="tab">Split Document</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="analyze-tab" data-bs-toggle="tab" data-bs-target="#analyze" type="button" role="tab">Analyze Structure</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="mainTabContent">
+                    <!-- Split Tab -->
+                    <div class="tab-pane fade show active" id="split" role="tabpanel">
+                        <div class="upload-section">
+                            <h2 class="section-title">Upload Your Document</h2>
+                            <form id="upload-form" enctype="multipart/form-data">
+                                <div class="file-input-wrapper">
+                                    <input type="file" name="file" id="file" accept=".docx,.docm" required>
+                                    <label for="file" class="file-input-label">
+                                        <span id="file-name">Choose a file...</span>
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100" id="upload-btn">Split Document</button>
+                            </form>
+                            
+                            <div class="progress-container">
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                </div>
+                                <p class="text-center mt-2">Processing your document...</p>
+                            </div>
+                            
+                            <div class="alert-container"></div>
+                            
+                            <div class="result-section" id="result-section" style="display: none;">
+                                <h3 class="section-title">Processing Complete!</h3>
+                                <p>Your document has been split into <strong id="file-count">0</strong> individual job descriptions.</p>
+                                
+                                <div class="download-section">
+                                    <a href="/download" id="download-link" class="btn btn-primary">
+                                        <i class="fas fa-download me-2"></i> Download All Documents
+                                    </a>
+                                </div>
+                                
+                                <div class="actions">
+                                    <button id="new-file-btn" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i> Split Another Document
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100" id="upload-btn">Split Document</button>
-                    </form>
-                    
-                    <div class="progress-container">
-                        <div class="progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                    </div>
+
+                    <!-- Analyze Tab -->
+                    <div class="tab-pane fade" id="analyze" role="tabpanel">
+                        <div class="analyze-section">
+                            <h2 class="section-title">Analyze Document Structure</h2>
+                            <p>Upload your document to see how it will be split before processing.</p>
+                            
+                            <form id="analyze-form" enctype="multipart/form-data">
+                                <div class="file-input-wrapper">
+                                    <input type="file" name="file" id="analyze-file" accept=".docx,.docm" required>
+                                    <label for="analyze-file" class="file-input-label">
+                                        <span id="analyze-file-name">Choose a file...</span>
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-secondary w-100" id="analyze-btn">Analyze Document</button>
+                            </form>
+                            
+                            <div id="analysis-result" style="display: none;">
+                                <h3 class="section-title">Analysis Results</h3>
+                                <div id="structure-details"></div>
+                            </div>
                         </div>
-                        <p class="text-center mt-2">Processing your document...</p>
-                    </div>
-                    
-                    <div class="alert-container"></div>
-                    
-                    <div class="info-section">
-                        <h3 class="section-title">How it works:</h3>
-                        <ol>
-                            <li>Upload your Word document containing multiple job descriptions</li>
-                            <li>Our system will split it into individual 2-page documents</li>
-                            <li>Each document will be branded with the company logo and font</li>
-                            <li>Download all documents as a zip file</li>
-                        </ol>
-                    </div>
-                </div>
-                
-                <!-- Result Section (Initially Hidden) -->
-                <div id="result-section" style="display: none;">
-                    <h2 class="section-title">Processing Complete!</h2>
-                    <p>Your document has been split into <strong id="file-count">0</strong> individual job descriptions.</p>
-                    
-                    <div class="download-section">
-                        <a href="#" id="download-link" class="btn btn-primary">
-                            <i class="fas fa-download me-2"></i> Download All Documents
-                        </a>
-                    </div>
-                    
-                    <div class="actions">
-                        <button id="new-file-btn" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-2"></i> Split Another Document
-                        </button>
                     </div>
                 </div>
             </div>
@@ -276,92 +286,179 @@
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('current-year').textContent = new Date().getFullYear();
             
+            // Split tab elements
             const fileInput = document.getElementById('file');
             const fileName = document.getElementById('file-name');
             const uploadForm = document.getElementById('upload-form');
             const uploadBtn = document.getElementById('upload-btn');
             const progressContainer = document.querySelector('.progress-container');
             const alertContainer = document.querySelector('.alert-container');
-            const uploadSection = document.getElementById('upload-section');
             const resultSection = document.getElementById('result-section');
             const fileCount = document.getElementById('file-count');
             const downloadLink = document.getElementById('download-link');
             const newFileBtn = document.getElementById('new-file-btn');
             
-            // File input change handler
+            // Analyze tab elements
+            const analyzeFileInput = document.getElementById('analyze-file');
+            const analyzeFileName = document.getElementById('analyze-file-name');
+            const analyzeForm = document.getElementById('analyze-form');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const analysisResult = document.getElementById('analysis-result');
+            const structureDetails = document.getElementById('structure-details');
+            
+            // Check server health on load
+            fetch('/health')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'healthy') {
+                        showAlert('Server is not responding correctly. Please try again later.', 'warning');
+                    }
+                })
+                .catch(error => {
+                    console.error('Health check failed:', error);
+                    showAlert('Cannot connect to server. Please check your connection.', 'danger');
+                });
+            
+            // File input handlers
             fileInput.addEventListener('change', function() {
-                if (fileInput.files.length > 0) {
-                    fileName.textContent = fileInput.files[0].name;
-                } else {
-                    fileName.textContent = 'Choose a file...';
-                }
+                updateFileName(fileInput, fileName);
             });
             
-            // Form submission handler
+            analyzeFileInput.addEventListener('change', function() {
+                updateFileName(analyzeFileInput, analyzeFileName);
+            });
+            
+            function updateFileName(input, label) {
+                if (input.files.length > 0) {
+                    const file = input.files[0];
+                    label.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                } else {
+                    label.textContent = 'Choose a file...';
+                }
+            }
+            
+            // Split form submission
             uploadForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                
-                if (fileInput.files.length === 0) {
+                processFile(fileInput, uploadBtn, progressContainer, true);
+            });
+            
+            // Analyze form submission
+            analyzeForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                processFile(analyzeFileInput, analyzeBtn, null, false);
+            });
+            
+            function processFile(input, button, progressElement, shouldSplit) {
+                if (input.files.length === 0) {
                     showAlert('Please select a file to upload.', 'danger');
                     return;
                 }
                 
-                const file = fileInput.files[0];
+                const file = input.files[0];
                 if (!file.name.endsWith('.docx') && !file.name.endsWith('.docm')) {
                     showAlert('Please upload a valid Word document (.docx or .docm)', 'danger');
                     return;
                 }
                 
                 // Show progress
-                uploadBtn.disabled = true;
-                progressContainer.style.display = 'block';
+                button.disabled = true;
+                if (progressElement) {
+                    progressElement.style.display = 'block';
+                }
                 alertContainer.innerHTML = '';
                 
                 // Create FormData
                 const formData = new FormData();
                 formData.append('file', file);
                 
+                // Choose endpoint
+                const endpoint = shouldSplit ? '/upload' : '/analyze';
+                
                 // Send file to server
-                fetch('/upload', {
+                fetch(endpoint, {
                     method: 'POST',
                     body: formData
                 })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
                     // Hide progress
-                    progressContainer.style.display = 'none';
-                    uploadBtn.disabled = false;
+                    button.disabled = false;
+                    if (progressElement) {
+                        progressElement.style.display = 'none';
+                    }
                     
                     if (data.success) {
-                        // Show result section
-                        fileCount.textContent = data.count;
-                        downloadLink.href = data.download_url;
-                        uploadSection.style.display = 'none';
-                        resultSection.style.display = 'block';
+                        if (shouldSplit) {
+                            // Show split results
+                            fileCount.textContent = data.count;
+                            resultSection.style.display = 'block';
+                            showAlert(data.message || 'Document processed successfully!', 'success');
+                            
+                            if (data.structure) {
+                                showDebugInfo(data.structure);
+                            }
+                        } else {
+                            // Show analysis results
+                            showAnalysisResults(data.structure);
+                            showAlert('Document analyzed successfully!', 'success');
+                        }
                     } else {
                         showAlert(data.message || 'An error occurred while processing your file.', 'danger');
                     }
                 })
                 .catch(error => {
                     // Hide progress
-                    progressContainer.style.display = 'none';
-                    uploadBtn.disabled = false;
+                    button.disabled = false;
+                    if (progressElement) {
+                        progressElement.style.display = 'none';
+                    }
                     showAlert('An error occurred while processing your file. Please try again.', 'danger');
                     console.error('Error:', error);
                 });
-            });
+            }
+            
+            function showAnalysisResults(structure) {
+                let html = `
+                    <div class="structure-info">
+                        <h5>Document Structure</h5>
+                        <p><strong>Total Paragraphs:</strong> ${structure.total_paragraphs}</p>
+                        <p><strong>Total Tables:</strong> ${structure.total_tables}</p>
+                        <p><strong>Has Page Breaks:</strong> ${structure.has_page_breaks ? 'Yes' : 'No'}</p>
+                        <p><strong>Job Headers Found:</strong> ${structure.headers_found.length}</p>
+                    </div>
+                `;
+                
+                if (structure.headers_found.length > 0) {
+                    html += '<h5>Detected Job Headers:</h5><ul>';
+                    structure.headers_found.forEach(header => {
+                        html += `<li><strong>Pattern:</strong> ${header.pattern_matched}<br>
+                                 <strong>Text:</strong> ${header.text}<br>
+                                 <strong>Position:</strong> Paragraph ${header.paragraph_index}</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                structureDetails.innerHTML = html;
+                analysisResult.style.display = 'block';
+            }
+            
+            function showDebugInfo(structure) {
+                const debugDiv = document.createElement('div');
+                debugDiv.className = 'debug-info';
+                debugDiv.innerHTML = `
+                    <h6>Debug Information:</h6>
+                    <pre>${JSON.stringify(structure, null, 2)}</pre>
+                `;
+                alertContainer.appendChild(debugDiv);
+            }
             
             // New file button handler
             newFileBtn.addEventListener('click', function() {
-                uploadSection.style.display = 'block';
                 resultSection.style.display = 'none';
                 fileInput.value = '';
                 fileName.textContent = 'Choose a file...';
+                alertContainer.innerHTML = '';
             });
             
             // Helper function to show alerts
@@ -373,6 +470,13 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 `;
                 alertContainer.appendChild(alert);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 5000);
             }
         });
     </script>
