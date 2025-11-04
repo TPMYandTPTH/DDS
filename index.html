@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,20 +6,19 @@
     <title>TP - Document Divider System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" href="TPLogo11.png" type="image/png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     
     <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --dark-color: #1a252f;
-            --light-color: #f8f9fa;
-            --gray-color: #6c757d;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #4a5568;
             min-height: 100vh;
             padding: 20px;
         }
@@ -32,14 +30,14 @@
 
         .main-card {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             overflow: hidden;
             margin-top: 20px;
         }
 
         .header-section {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
+            background-color: #2c3e50;
             padding: 40px 20px;
             text-align: center;
             color: white;
@@ -49,11 +47,6 @@
             max-width: 150px;
             height: auto;
             margin-bottom: 20px;
-            transition: transform 0.3s ease;
-        }
-
-        .logo:hover {
-            transform: scale(1.1);
         }
 
         .header-section h1 {
@@ -74,30 +67,30 @@
         }
 
         .upload-zone {
-            border: 3px dashed #ddd;
-            border-radius: 15px;
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
             padding: 50px 20px;
             text-align: center;
-            transition: all 0.3s ease;
             cursor: pointer;
-            background: var(--light-color);
+            background: #f7fafc;
             margin-bottom: 30px;
+            transition: all 0.3s ease;
         }
 
         .upload-zone:hover {
-            border-color: var(--secondary-color);
-            background: #e3f2fd;
-            transform: translateY(-5px);
+            border-color: #3498db;
+            background: #edf2f7;
+            transform: translateY(-2px);
         }
 
         .upload-zone.dragover {
-            border-color: var(--primary-color);
-            background: #bbdefb;
+            border-color: #2c3e50;
+            background: #e2e8f0;
         }
 
         .upload-icon {
             font-size: 4rem;
-            color: var(--secondary-color);
+            color: #3498db;
             margin-bottom: 20px;
         }
 
@@ -105,40 +98,52 @@
             padding: 15px 40px;
             font-size: 1.1rem;
             font-weight: 600;
-            border-radius: 50px;
+            border-radius: 8px;
             border: none;
-            transition: all 0.3s ease;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 1px;
+            transition: all 0.3s ease;
         }
 
         .btn-primary-custom {
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+            background-color: #3498db;
             color: white;
         }
 
         .btn-primary-custom:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.4);
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
         }
 
         .btn-primary-custom:disabled {
-            opacity: 0.6;
+            background-color: #95a5a6;
             cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-secondary-custom {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary-custom:hover {
+            background-color: #5a6268;
         }
 
         .progress-section {
             display: none;
             margin: 30px 0;
+            text-align: center;
         }
 
         .result-section {
             display: none;
             text-align: center;
             padding: 30px;
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-            border-radius: 15px;
+            background-color: #e8f5e9;
+            border-radius: 12px;
             margin-top: 30px;
         }
 
@@ -151,45 +156,31 @@
         .file-count {
             font-size: 3rem;
             font-weight: bold;
-            color: var(--primary-color);
+            color: #2c3e50;
             margin: 20px 0;
         }
 
         .info-box {
-            background: #e3f2fd;
-            border-left: 5px solid var(--secondary-color);
+            background-color: #e3f2fd;
+            border-left: 5px solid #3498db;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 8px;
             margin: 30px 0;
         }
 
         .info-box h5 {
-            color: var(--primary-color);
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-
-        .warning-box {
-            background: #fff3cd;
-            border-left: 5px solid #ffc107;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 30px 0;
-        }
-
-        .warning-box h5 {
-            color: #856404;
+            color: #2c3e50;
             font-weight: bold;
             margin-bottom: 15px;
         }
 
         footer {
-            background: rgba(255,255,255,0.95);
+            background: white;
             padding: 20px;
             text-align: center;
-            border-radius: 15px;
+            border-radius: 12px;
             margin-top: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .stats-grid {
@@ -202,27 +193,23 @@
         .stat-card {
             background: white;
             padding: 25px;
-            border-radius: 15px;
+            border-radius: 12px;
             text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .stat-number {
             font-size: 2.5rem;
             font-weight: bold;
-            color: var(--secondary-color);
+            color: #3498db;
         }
 
         .stat-label {
-            color: var(--gray-color);
+            color: #6c757d;
             font-size: 0.9rem;
             text-transform: uppercase;
             letter-spacing: 1px;
+            margin-top: 8px;
         }
 
         #file-input {
@@ -232,13 +219,13 @@
         .file-name {
             margin-top: 15px;
             font-weight: 600;
-            color: var(--primary-color);
+            color: #2c3e50;
             word-break: break-all;
         }
 
         .spinner {
             border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--secondary-color);
+            border-top: 5px solid #3498db;
             border-radius: 50%;
             width: 60px;
             height: 60px;
@@ -251,15 +238,10 @@
             100% { transform: rotate(360deg); }
         }
 
-        .code-block {
-            background: #f5f5f5;
-            border: 1px solid #ddd;
+        .alert-custom {
             border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            overflow-x: auto;
+            padding: 15px 20px;
+            margin: 20px 0;
         }
 
         @media (max-width: 768px) {
@@ -289,34 +271,14 @@
 
             <!-- Content Section -->
             <div class="content-section">
-                <!-- Warning Box -->
-                <div class="warning-box" id="warning-box">
-                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Backend Server Required</h5>
-                    <p><strong>This application requires a Python Flask backend to function.</strong></p>
-                    <p>To use this application:</p>
-                    <ol>
-                        <li>Install Python 3.8 or higher</li>
-                        <li>Save the backend code as <code>app.py</code></li>
-                        <li>Install dependencies: <code>pip install Flask python-docx flask-cors</code></li>
-                        <li>Run the server: <code>python app.py</code></li>
-                        <li>Refresh this page</li>
-                    </ol>
-                    <div class="code-block">
-                        <strong>Quick Start:</strong><br>
-                        pip install Flask python-docx flask-cors<br>
-                        python app.py
-                    </div>
-                    <p><small>Status: <span id="connection-status" style="color: #dc3545; font-weight: bold;">❌ Not Connected</span></small></p>
-                </div>
-
                 <!-- Info Box -->
                 <div class="info-box">
                     <h5><i class="fas fa-info-circle me-2"></i>How It Works</h5>
-                    <ul>
-                        <li>Upload your Word document (.docx or .docm)</li>
-                        <li>System automatically splits every 2 pages into separate files</li>
-                        <li>Download all files as a convenient ZIP archive</li>
-                        <li>Perfect for processing multiple job descriptions</li>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li>Upload your Word document (.docx)</li>
+                        <li>System splits every 2 pages into separate files</li>
+                        <li>Download all files as a ZIP archive</li>
+                        <li>Works entirely in your browser - no server needed!</li>
                     </ul>
                 </div>
 
@@ -326,11 +288,11 @@
                         <i class="fas fa-cloud-upload-alt"></i>
                     </div>
                     <h4>Drop your file here or click to browse</h4>
-                    <p class="text-muted mt-2">Supported formats: .docx, .docm (Max 50MB)</p>
+                    <p class="text-muted mt-2">Supported format: .docx (Max 50MB)</p>
                     <p class="file-name" id="file-name"></p>
                 </div>
 
-                <input type="file" id="file-input" accept=".docx,.docm">
+                <input type="file" id="file-input" accept=".docx">
 
                 <!-- Action Button -->
                 <div class="text-center">
@@ -361,12 +323,12 @@
                     <div class="stats-grid" id="stats-grid"></div>
 
                     <div class="mt-4">
-                        <a href="#" id="download-link" class="btn-custom btn-primary-custom">
+                        <button class="btn-custom btn-primary-custom" id="download-btn">
                             <i class="fas fa-download me-2"></i>Download All Files (ZIP)
-                        </a>
+                        </button>
                     </div>
 
-                    <button class="btn-custom btn-primary-custom mt-3" id="reset-btn" style="background: var(--gray-color);">
+                    <button class="btn-custom btn-secondary-custom mt-3" id="reset-btn">
                         <i class="fas fa-redo me-2"></i>Process Another Document
                     </button>
                 </div>
@@ -377,12 +339,12 @@
         <footer>
             <div class="row align-items-center">
                 <div class="col-md-6 text-center text-md-start">
-                    <p class="mb-0" style="color: var(--primary-color); font-weight: 600;">
+                    <p class="mb-0" style="color: #2c3e50; font-weight: 600;">
                         © <span id="current-year"></span> TP. All rights reserved.
                     </p>
                 </div>
                 <div class="col-md-6 text-center text-md-end">
-                    <p class="mb-0" style="color: var(--secondary-color); font-weight: bold; font-size: 1.1rem;">
+                    <p class="mb-0" style="color: #3498db; font-weight: bold; font-size: 1.1rem;">
                         #MoreTogether
                     </p>
                 </div>
@@ -403,62 +365,21 @@
         const progressSection = document.getElementById('progress-section');
         const resultSection = document.getElementById('result-section');
         const fileCount = document.getElementById('file-count');
-        const downloadLink = document.getElementById('download-link');
+        const downloadBtn = document.getElementById('download-btn');
         const resetBtn = document.getElementById('reset-btn');
         const alertContainer = document.getElementById('alert-container');
         const statsGrid = document.getElementById('stats-grid');
-        const warningBox = document.getElementById('warning-box');
-        const connectionStatus = document.getElementById('connection-status');
 
         let selectedFile = null;
-        let isServerConnected = false;
-
-        // Check server connection
-        async function checkServerConnection() {
-            try {
-                const response = await fetch('/health', { 
-                    method: 'GET',
-                    signal: AbortSignal.timeout(3000)
-                });
-                const data = await response.json();
-                
-                if (data.status === 'healthy') {
-                    isServerConnected = true;
-                    warningBox.style.display = 'none';
-                    connectionStatus.textContent = '✅ Connected';
-                    connectionStatus.style.color = '#28a745';
-                    return true;
-                }
-            } catch (error) {
-                isServerConnected = false;
-                warningBox.style.display = 'block';
-                connectionStatus.textContent = '❌ Not Connected';
-                connectionStatus.style.color = '#dc3545';
-                return false;
-            }
-        }
-
-        // Initial connection check
-        checkServerConnection();
-
-        // Retry connection every 5 seconds
-        setInterval(checkServerConnection, 5000);
+        let processedFiles = [];
 
         // Click to upload
-        uploadZone.addEventListener('click', () => {
-            if (!isServerConnected) {
-                showAlert('Please start the backend server first. See instructions above.', 'warning');
-                return;
-            }
-            fileInput.click();
-        });
+        uploadZone.addEventListener('click', () => fileInput.click());
 
-        // Drag and drop handlers
+        // Drag and drop
         uploadZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            if (isServerConnected) {
-                uploadZone.classList.add('dragover');
-            }
+            uploadZone.classList.add('dragover');
         });
 
         uploadZone.addEventListener('dragleave', () => {
@@ -468,11 +389,6 @@
         uploadZone.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadZone.classList.remove('dragover');
-            
-            if (!isServerConnected) {
-                showAlert('Please start the backend server first. See instructions above.', 'warning');
-                return;
-            }
             
             if (e.dataTransfer.files.length > 0) {
                 fileInput.files = e.dataTransfer.files;
@@ -488,8 +404,8 @@
                 selectedFile = fileInput.files[0];
                 const sizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
                 
-                if (!selectedFile.name.endsWith('.docx') && !selectedFile.name.endsWith('.docm')) {
-                    showAlert('Please select a valid Word document (.docx or .docm)', 'danger');
+                if (!selectedFile.name.endsWith('.docx')) {
+                    showAlert('Please select a valid Word document (.docx)', 'danger');
                     resetFileInput();
                     return;
                 }
@@ -509,64 +425,155 @@
 
         // Split button click
         splitBtn.addEventListener('click', async () => {
-            if (!selectedFile || !isServerConnected) {
-                showAlert('Please ensure the backend server is running.', 'warning');
-                return;
-            }
+            if (!selectedFile) return;
 
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-
-            // Show progress
             splitBtn.disabled = true;
             progressSection.style.display = 'block';
             resultSection.style.display = 'none';
             alertContainer.innerHTML = '';
 
             try {
-                const response = await fetch('/split', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error('Server returned an error');
-                }
-
-                const data = await response.json();
-
-                if (data.success) {
-                    // Show results
-                    fileCount.textContent = data.file_count;
-                    downloadLink.href = `/download/${data.session_id}`;
-                    
-                    // Show stats
-                    statsGrid.innerHTML = `
-                        <div class="stat-card">
-                            <div class="stat-number">${data.total_pages}</div>
-                            <div class="stat-label">Total Pages</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${data.file_count}</div>
-                            <div class="stat-label">Files Created</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">2</div>
-                            <div class="stat-label">Pages per File</div>
-                        </div>
-                    `;
-                    
-                    progressSection.style.display = 'none';
-                    resultSection.style.display = 'block';
-                    showAlert(data.message, 'success');
-                } else {
-                    throw new Error(data.message || 'Processing failed');
-                }
-            } catch (error) {
+                // Read the file
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                
+                // Load with JSZip
+                const docZip = await JSZip.loadAsync(arrayBuffer);
+                
+                // Get document.xml
+                const docXml = await docZip.file('word/document.xml').async('string');
+                
+                // Count page breaks
+                const pageBreaks = (docXml.match(/<w:br w:type="page"\/>/g) || []).length;
+                const estimatedPages = pageBreaks + 1;
+                const filesNeeded = Math.ceil(estimatedPages / 2);
+                
+                console.log(`Found ${pageBreaks} page breaks, ${estimatedPages} pages, creating ${filesNeeded} files`);
+                
+                // Split document
+                const splitFiles = await splitDocument(docZip, filesNeeded);
+                processedFiles = splitFiles;
+                
+                // Show results
+                fileCount.textContent = splitFiles.length;
+                
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${estimatedPages}</div>
+                        <div class="stat-label">Total Pages</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${splitFiles.length}</div>
+                        <div class="stat-label">Files Created</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">2</div>
+                        <div class="stat-label">Pages per File</div>
+                    </div>
+                `;
+                
                 progressSection.style.display = 'none';
-                showAlert(`Error: ${error.message}. Make sure the backend server is running.`, 'danger');
+                resultSection.style.display = 'block';
+                showAlert('Document successfully split!', 'success');
+            } catch (error) {
+                console.error('Error:', error);
+                progressSection.style.display = 'none';
+                showAlert('Error processing document: ' + error.message, 'danger');
                 splitBtn.disabled = false;
             }
+        });
+
+        async function splitDocument(docZip, numFiles) {
+            const files = [];
+            
+            // Get document content
+            const docXml = await docZip.file('word/document.xml').async('string');
+            
+            // Parse XML
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(docXml, 'text/xml');
+            const body = xmlDoc.getElementsByTagName('w:body')[0];
+            const elements = Array.from(body.children);
+            
+            // Calculate elements per file
+            const elementsPerFile = Math.ceil(elements.length / numFiles);
+            
+            // Split into chunks
+            for (let i = 0; i < numFiles; i++) {
+                const start = i * elementsPerFile;
+                const end = Math.min(start + elementsPerFile, elements.length);
+                const chunk = elements.slice(start, end);
+                
+                // Create new document
+                const newDoc = xmlDoc.cloneNode(true);
+                const newBody = newDoc.getElementsByTagName('w:body')[0];
+                
+                // Clear body
+                while (newBody.firstChild) {
+                    newBody.removeChild(newBody.firstChild);
+                }
+                
+                // Add chunk elements
+                chunk.forEach(el => {
+                    newBody.appendChild(el.cloneNode(true));
+                });
+                
+                // Add section properties if missing
+                if (!newBody.getElementsByTagName('w:sectPr').length) {
+                    const sectPr = body.getElementsByTagName('w:sectPr')[0];
+                    if (sectPr) {
+                        newBody.appendChild(sectPr.cloneNode(true));
+                    }
+                }
+                
+                // Serialize back to string
+                const serializer = new XMLSerializer();
+                const newDocXml = serializer.serializeToString(newDoc);
+                
+                // Create new zip
+                const newZip = new JSZip();
+                
+                // Copy all files from original
+                const copyPromises = [];
+                docZip.forEach((relativePath, file) => {
+                    if (relativePath === 'word/document.xml') {
+                        newZip.file(relativePath, newDocXml);
+                    } else {
+                        copyPromises.push(
+                            file.async('arraybuffer').then(content => {
+                                newZip.file(relativePath, content);
+                            })
+                        );
+                    }
+                });
+                
+                await Promise.all(copyPromises);
+                
+                // Generate blob
+                const blob = await newZip.generateAsync({type: 'blob'});
+                files.push({
+                    name: `JD_${String(i + 1).padStart(3, '0')}.docx`,
+                    blob: blob
+                });
+            }
+            
+            return files;
+        }
+
+        // Download button
+        downloadBtn.addEventListener('click', async () => {
+            const zip = new JSZip();
+            
+            // Add all files to zip
+            processedFiles.forEach(file => {
+                zip.file(file.name, file.blob);
+            });
+            
+            // Generate and download
+            const zipBlob = await zip.generateAsync({type: 'blob'});
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            saveAs(zipBlob, `TP_JobDescriptions_${timestamp}.zip`);
+            
+            showAlert('Download started!', 'success');
         });
 
         // Reset button
@@ -576,13 +583,12 @@
             resultSection.style.display = 'none';
             alertContainer.innerHTML = '';
             splitBtn.disabled = false;
+            processedFiles = [];
         });
 
         function showAlert(message, type) {
             const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-            alertDiv.style.borderRadius = '10px';
-            alertDiv.style.marginTop = '20px';
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show alert-custom`;
             alertDiv.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -591,7 +597,7 @@
 
             setTimeout(() => {
                 alertDiv.remove();
-            }, 7000);
+            }, 5000);
         }
     </script>
 </body>
