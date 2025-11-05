@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TP - Document Divider System</title>
+    <link rel="icon" type="image/png" href="TPLogo11.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -18,7 +19,7 @@
 
         body {
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            background-color: #4a5568;
+            background-color: #f5f5f5;
             min-height: 100vh;
             padding: 20px;
         }
@@ -31,7 +32,7 @@
         .main-card {
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             overflow: hidden;
             margin-top: 20px;
         }
@@ -72,20 +73,20 @@
             padding: 50px 20px;
             text-align: center;
             cursor: pointer;
-            background: #f7fafc;
+            background: #fafafa;
             margin-bottom: 30px;
             transition: all 0.3s ease;
         }
 
         .upload-zone:hover {
             border-color: #3498db;
-            background: #edf2f7;
+            background: #f0f8ff;
             transform: translateY(-2px);
         }
 
         .upload-zone.dragover {
             border-color: #2c3e50;
-            background: #e2e8f0;
+            background: #e8f4f8;
         }
 
         .upload-icon {
@@ -180,7 +181,7 @@
             text-align: center;
             border-radius: 12px;
             margin-top: 30px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .stats-grid {
@@ -195,7 +196,7 @@
             padding: 25px;
             border-radius: 12px;
             text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
 
         .stat-number {
@@ -244,6 +245,27 @@
             margin: 20px 0;
         }
 
+        .file-list {
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .file-list-item {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+        }
+
+        .file-list-item:last-child {
+            border-bottom: none;
+        }
+
         @media (max-width: 768px) {
             .header-section h1 {
                 font-size: 2rem;
@@ -277,8 +299,8 @@
                     <ul style="margin: 0; padding-left: 20px;">
                         <li>Upload your Word document (.docx)</li>
                         <li>System splits every 2 pages into separate files</li>
+                        <li>Files are named using: Job Description + Client + Title + Version</li>
                         <li>Download all files as a ZIP archive</li>
-                        <li>Works entirely in your browser - no server needed!</li>
                     </ul>
                 </div>
 
@@ -305,7 +327,7 @@
                 <div class="progress-section" id="progress-section">
                     <div class="spinner"></div>
                     <h5 class="text-center mt-3">Processing your document...</h5>
-                    <p class="text-center text-muted">This may take a few moments</p>
+                    <p class="text-center text-muted">Extracting job descriptions and splitting pages...</p>
                 </div>
 
                 <!-- Alert Container -->
@@ -321,6 +343,8 @@
                     <p class="lead">Individual job descriptions created</p>
                     
                     <div class="stats-grid" id="stats-grid"></div>
+
+                    <div class="file-list" id="file-list"></div>
 
                     <div class="mt-4">
                         <button class="btn-custom btn-primary-custom" id="download-btn">
@@ -369,6 +393,7 @@
         const resetBtn = document.getElementById('reset-btn');
         const alertContainer = document.getElementById('alert-container');
         const statsGrid = document.getElementById('stats-grid');
+        const fileList = document.getElementById('file-list');
 
         let selectedFile = null;
         let processedFiles = [];
@@ -442,23 +467,23 @@
                 // Get document.xml
                 const docXml = await docZip.file('word/document.xml').async('string');
                 
-                // Count page breaks
-                const pageBreaks = (docXml.match(/<w:br w:type="page"\/>/g) || []).length;
-                const estimatedPages = pageBreaks + 1;
-                const filesNeeded = Math.ceil(estimatedPages / 2);
-                
-                console.log(`Found ${pageBreaks} page breaks, ${estimatedPages} pages, creating ${filesNeeded} files`);
-                
-                // Split document
-                const splitFiles = await splitDocument(docZip, filesNeeded);
+                // Split document with smart naming
+                const splitFiles = await splitDocumentSmart(docZip, docXml);
                 processedFiles = splitFiles;
                 
                 // Show results
                 fileCount.textContent = splitFiles.length;
                 
+                // Show file list
+                let fileListHtml = '<strong>Created Files:</strong><br>';
+                splitFiles.forEach((file, index) => {
+                    fileListHtml += `<div class="file-list-item">${index + 1}. ${file.name}</div>`;
+                });
+                fileList.innerHTML = fileListHtml;
+                
                 statsGrid.innerHTML = `
                     <div class="stat-card">
-                        <div class="stat-number">${estimatedPages}</div>
+                        <div class="stat-number">${splitFiles.length * 2}</div>
                         <div class="stat-label">Total Pages</div>
                     </div>
                     <div class="stat-card">
@@ -482,26 +507,123 @@
             }
         });
 
-        async function splitDocument(docZip, numFiles) {
-            const files = [];
+        function extractTextFromXml(xmlString) {
+            // Extract text content from Word XML
+            const textMatches = xmlString.match(/<w:t[^>]*>([^<]*)<\/w:t>/g);
+            if (!textMatches) return '';
             
-            // Get document content
-            const docXml = await docZip.file('word/document.xml').async('string');
+            return textMatches
+                .map(match => match.replace(/<w:t[^>]*>|<\/w:t>/g, ''))
+                .join(' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function extractJobInfo(text) {
+            // Extract client name, job title, and version from text
+            let clientName = 'Client';
+            let jobTitle = 'Position';
+            let version = '1';
+            
+            // Try to find client name (look for "Client name" or similar patterns)
+            const clientMatch = text.match(/Client\s*name[:\s]*([^\n\r]+)/i) || 
+                               text.match(/Company[:\s]*([^\n\r]+)/i);
+            if (clientMatch && clientMatch[1]) {
+                clientName = clientMatch[1].trim().substring(0, 50);
+            }
+            
+            // Try to find job title (look for "Job Description" followed by title)
+            const jobMatch = text.match(/Job\s*Description[:\s]*([^\n\r]+)/i) ||
+                            text.match(/Position[:\s]*([^\n\r]+)/i) ||
+                            text.match(/Title[:\s]*([^\n\r]+)/i);
+            if (jobMatch && jobMatch[1]) {
+                jobTitle = jobMatch[1].trim().substring(0, 50);
+            }
+            
+            // Try to find version
+            const versionMatch = text.match(/Version[:\s]*(\d+)/i) ||
+                                text.match(/V[:\s]*(\d+)/i);
+            if (versionMatch && versionMatch[1]) {
+                version = versionMatch[1];
+            }
+            
+            return { clientName, jobTitle, version };
+        }
+
+        function sanitizeFilename(filename) {
+            // Remove invalid characters from filename
+            return filename
+                .replace(/[<>:"/\\|?*]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .substring(0, 150); // Limit length
+        }
+
+        async function splitDocumentSmart(docZip, docXml) {
+            const files = [];
             
             // Parse XML
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(docXml, 'text/xml');
             const body = xmlDoc.getElementsByTagName('w:body')[0];
-            const elements = Array.from(body.children);
             
-            // Calculate elements per file
-            const elementsPerFile = Math.ceil(elements.length / numFiles);
+            // Find all page breaks
+            const pageBreakIndices = [];
+            const paragraphs = Array.from(body.getElementsByTagName('w:p'));
             
-            // Split into chunks
-            for (let i = 0; i < numFiles; i++) {
-                const start = i * elementsPerFile;
-                const end = Math.min(start + elementsPerFile, elements.length);
-                const chunk = elements.slice(start, end);
+            paragraphs.forEach((para, index) => {
+                const breaks = para.getElementsByTagName('w:br');
+                for (let br of breaks) {
+                    const type = br.getAttribute('w:type');
+                    if (type === 'page') {
+                        pageBreakIndices.push(index);
+                    }
+                }
+            });
+            
+            console.log(`Found ${pageBreakIndices.length} page breaks`);
+            console.log('Page break positions:', pageBreakIndices);
+            
+            // If no page breaks found, estimate by content
+            if (pageBreakIndices.length === 0) {
+                const totalParas = paragraphs.length;
+                const parasPerPage = Math.ceil(totalParas / 46); // Assuming 46 JDs
+                for (let i = parasPerPage * 2; i < totalParas; i += parasPerPage * 2) {
+                    pageBreakIndices.push(i);
+                }
+            }
+            
+            // Group by 2 pages (every 2nd page break = 1 file)
+            const fileRanges = [];
+            let startIdx = 0;
+            
+            for (let i = 1; i < pageBreakIndices.length; i += 2) {
+                const endIdx = pageBreakIndices[i];
+                fileRanges.push({ start: startIdx, end: endIdx });
+                startIdx = endIdx + 1;
+            }
+            
+            // Handle last file if needed
+            if (startIdx < paragraphs.length) {
+                fileRanges.push({ start: startIdx, end: paragraphs.length - 1 });
+            }
+            
+            console.log(`Creating ${fileRanges.length} files`);
+            
+            // Create a file for each range
+            for (let i = 0; i < fileRanges.length; i++) {
+                const range = fileRanges[i];
+                const chunk = paragraphs.slice(range.start, range.end + 1);
+                
+                // Extract text from this chunk to get job info
+                const chunkXml = chunk.map(p => p.outerHTML).join('');
+                const chunkText = extractTextFromXml(chunkXml);
+                const jobInfo = extractJobInfo(chunkText);
+                
+                // Create filename
+                const filename = sanitizeFilename(
+                    `Job Description - ${jobInfo.clientName} - ${jobInfo.jobTitle} - Version ${jobInfo.version}.docx`
+                );
                 
                 // Create new document
                 const newDoc = xmlDoc.cloneNode(true);
@@ -512,9 +634,9 @@
                     newBody.removeChild(newBody.firstChild);
                 }
                 
-                // Add chunk elements
-                chunk.forEach(el => {
-                    newBody.appendChild(el.cloneNode(true));
+                // Add chunk paragraphs
+                chunk.forEach(para => {
+                    newBody.appendChild(para.cloneNode(true));
                 });
                 
                 // Add section properties if missing
@@ -551,7 +673,7 @@
                 // Generate blob
                 const blob = await newZip.generateAsync({type: 'blob'});
                 files.push({
-                    name: `JD_${String(i + 1).padStart(3, '0')}.docx`,
+                    name: filename,
                     blob: blob
                 });
             }
