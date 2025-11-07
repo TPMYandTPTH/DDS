@@ -247,7 +247,7 @@
 
         .file-list {
             text-align: left;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
             margin: 20px 0;
             padding: 15px;
@@ -298,7 +298,7 @@
                     <h5><i class="fas fa-info-circle me-2"></i>How It Works</h5>
                     <ul style="margin: 0; padding-left: 20px;">
                         <li>Upload your Word document (.docx)</li>
-                        <li>System splits by sections (3 sections = 2 pages = 1 JD)</li>
+                        <li>System finds each JD by detecting "Client name" markers</li>
                         <li>Files named: Job Description + Client + Title + Version</li>
                         <li>Download all files as a ZIP archive</li>
                     </ul>
@@ -327,7 +327,7 @@
                 <div class="progress-section" id="progress-section">
                     <div class="spinner"></div>
                     <h5 class="text-center mt-3">Processing your document...</h5>
-                    <p class="text-center text-muted">Splitting by sections (3 sections = 1 JD)...</p>
+                    <p class="text-center text-muted">Finding JD boundaries and extracting information...</p>
                 </div>
 
                 <!-- Alert Container -->
@@ -378,10 +378,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Set current year
         document.getElementById('current-year').textContent = new Date().getFullYear();
 
-        // Elements
         const fileInput = document.getElementById('file-input');
         const uploadZone = document.getElementById('upload-zone');
         const fileName = document.getElementById('file-name');
@@ -398,10 +396,8 @@
         let selectedFile = null;
         let processedFiles = [];
 
-        // Click to upload
         uploadZone.addEventListener('click', () => fileInput.click());
 
-        // Drag and drop
         uploadZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadZone.classList.add('dragover');
@@ -421,7 +417,6 @@
             }
         });
 
-        // File input change
         fileInput.addEventListener('change', handleFileSelect);
 
         function handleFileSelect() {
@@ -448,7 +443,6 @@
             splitBtn.disabled = true;
         }
 
-        // Split button click
         splitBtn.addEventListener('click', async () => {
             if (!selectedFile) return;
 
@@ -461,14 +455,11 @@
                 const arrayBuffer = await selectedFile.arrayBuffer();
                 const docZip = await JSZip.loadAsync(arrayBuffer);
                 
-                // Split by sections (every 3 sections = 1 JD)
-                const splitFiles = await splitBySections(docZip);
+                const splitFiles = await splitByClientNameMarkers(docZip);
                 processedFiles = splitFiles;
                 
-                // Show results
                 fileCount.textContent = splitFiles.length;
                 
-                // Show file list
                 let fileListHtml = '<strong>Created Files:</strong><br>';
                 splitFiles.forEach((file, index) => {
                     fileListHtml += `<div class="file-list-item">${index + 1}. ${file.name}</div>`;
@@ -478,7 +469,7 @@
                 statsGrid.innerHTML = `
                     <div class="stat-card">
                         <div class="stat-number">${splitFiles.length * 2}</div>
-                        <div class="stat-label">Total Pages</div>
+                        <div class="stat-label">Approx Pages</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number">${splitFiles.length}</div>
@@ -501,77 +492,60 @@
             }
         });
 
-        async function splitBySections(docZip) {
+        async function splitByClientNameMarkers(docZip) {
             const files = [];
             
-            // Get document.xml
             const docXml = await docZip.file('word/document.xml').async('string');
-            
-            // Parse XML
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(docXml, 'text/xml');
             const body = xmlDoc.getElementsByTagName('w:body')[0];
-            
-            // Find all section breaks (w:sectPr)
             const allElements = Array.from(body.children);
-            const sectionBreakIndices = [];
+            
+            // Find all paragraphs that contain "Client name" text
+            const clientNameIndices = [];
             
             allElements.forEach((el, index) => {
-                // Check if element has sectPr
-                const sectPr = el.getElementsByTagName('w:sectPr');
-                if (sectPr.length > 0) {
-                    sectionBreakIndices.push(index);
+                const textNodes = el.getElementsByTagName('w:t');
+                for (let t of textNodes) {
+                    const text = t.textContent.trim().toLowerCase();
+                    if (text === 'client name' || text.includes('client name')) {
+                        clientNameIndices.push(index);
+                        break;
+                    }
                 }
             });
             
-            console.log(`Found ${sectionBreakIndices.length} section breaks`);
-            console.log('Section break positions:', sectionBreakIndices);
+            console.log(`Found ${clientNameIndices.length} "Client name" markers at positions:`, clientNameIndices);
             
-            // Group every 3 sections = 1 JD
-            const sectionsPerJD = 3;
-            let startIdx = 0;
-            let jdNumber = 1;
+            if (clientNameIndices.length === 0) {
+                throw new Error('No "Client name" markers found in document. Cannot split.');
+            }
             
-            for (let i = sectionsPerJD - 1; i < sectionBreakIndices.length; i += sectionsPerJD) {
-                const endIdx = sectionBreakIndices[i];
-                const chunk = allElements.slice(startIdx, endIdx + 1);
+            // Split document at each "Client name" marker
+            for (let i = 0; i < clientNameIndices.length; i++) {
+                const startIdx = clientNameIndices[i];
+                const endIdx = (i + 1 < clientNameIndices.length) ? clientNameIndices[i + 1] : allElements.length;
                 
-                // Extract job info from this chunk
+                const chunk = allElements.slice(startIdx, endIdx);
+                
+                if (chunk.length === 0) continue;
+                
+                // Extract text from this chunk
                 const chunkText = extractTextFromElements(chunk);
-                const jobInfo = extractJobInfo(chunkText);
+                const jobInfo = extractJobInfo(chunkText, chunk);
                 
                 // Create filename
                 const filename = sanitizeFilename(
                     `Job Description - ${jobInfo.clientName} - ${jobInfo.jobTitle} - Version ${jobInfo.version}.docx`
                 );
                 
-                // Create new document with this chunk
+                // Create document
                 const blob = await createDocumentFromChunk(docZip, chunk, xmlDoc);
                 
-                files.push({
-                    name: filename,
-                    blob: blob
-                });
-                
-                startIdx = endIdx + 1;
-                jdNumber++;
+                files.push({ name: filename, blob: blob });
             }
             
-            // Handle remaining content if any
-            if (startIdx < allElements.length) {
-                const chunk = allElements.slice(startIdx);
-                if (chunk.length > 0) {
-                    const chunkText = extractTextFromElements(chunk);
-                    const jobInfo = extractJobInfo(chunkText);
-                    const filename = sanitizeFilename(
-                        `Job Description - ${jobInfo.clientName} - ${jobInfo.jobTitle} - Version ${jobInfo.version}.docx`
-                    );
-                    const blob = await createDocumentFromChunk(docZip, chunk, xmlDoc);
-                    files.push({ name: filename, blob: blob });
-                }
-            }
-            
-            console.log(`Created ${files.length} files`);
+            console.log(`Created ${files.length} files from ${clientNameIndices.length} markers`);
             return files;
         }
 
@@ -583,48 +557,90 @@
                     text += t.textContent + ' ';
                 }
             });
-            return text.trim();
+            return text;
         }
 
-        function extractJobInfo(text) {
-            let clientName = 'Unknown Client';
-            let jobTitle = 'Position';
+        function extractJobInfo(fullText, elements) {
+            let clientName = '';
+            let jobTitle = '';
             let version = '1';
             
-            // Look for client name - it appears after "Client name" text
-            // The pattern in your doc is just "Client name" as a label
-            // The actual client name follows in the next text elements
-            const lines = text.split(/[\r\n]+/);
+            // Extract text from each paragraph separately to maintain structure
+            const paragraphTexts = [];
+            elements.forEach(el => {
+                const textNodes = el.getElementsByTagName('w:t');
+                let paraText = '';
+                for (let t of textNodes) {
+                    paraText += t.textContent;
+                }
+                if (paraText.trim()) {
+                    paragraphTexts.push(paraText.trim());
+                }
+            });
             
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
+            // Find client name - should be right after "Client name" label
+            for (let i = 0; i < paragraphTexts.length; i++) {
+                const text = paragraphTexts[i].toLowerCase();
                 
-                // If we find "Client name", the next non-empty line is likely the actual client
-                if (line.toLowerCase().includes('client name') && i + 1 < lines.length) {
-                    const nextLine = lines[i + 1].trim();
-                    if (nextLine && nextLine.toLowerCase() !== 'client name') {
-                        clientName = nextLine.substring(0, 50);
+                // If this paragraph is "Client name", next non-empty paragraph is the actual client
+                if (text === 'client name' || text.includes('client name:')) {
+                    for (let j = i + 1; j < paragraphTexts.length && j < i + 5; j++) {
+                        const nextText = paragraphTexts[j].trim();
+                        if (nextText && 
+                            nextText.toLowerCase() !== 'client name' && 
+                            nextText.length > 2 &&
+                            nextText.length < 100) {
+                            clientName = nextText;
+                            break;
+                        }
+                    }
+                    if (!clientName && paragraphTexts[i].includes(':')) {
+                        // Client name might be on same line after colon
+                        const parts = paragraphTexts[i].split(':');
+                        if (parts.length > 1) {
+                            clientName = parts[1].trim();
+                        }
                     }
                 }
                 
-                // Look for job title after "Job Description"
-                if (line.toLowerCase().includes('job description') && i + 1 < lines.length) {
-                    const nextLine = lines[i + 1].trim();
-                    if (nextLine && nextLine.toLowerCase() !== 'job description') {
-                        jobTitle = nextLine.substring(0, 50);
+                // Find job title - should be near or after "Job Description"
+                if (text.includes('job description') && text !== 'job description') {
+                    // Title might be on same line
+                    const afterDesc = text.substring(text.indexOf('job description') + 15).trim();
+                    if (afterDesc && afterDesc.length > 3 && afterDesc.length < 100) {
+                        jobTitle = afterDesc.replace(/[:\-–]/g, '').trim();
                     }
                 }
                 
-                // Look for version
-                const versionMatch = line.match(/version[:\s]*(\d+)/i);
+                // Try next line after "Job Description"
+                if (text === 'job description' || text.includes('job description:')) {
+                    for (let j = i + 1; j < paragraphTexts.length && j < i + 5; j++) {
+                        const nextText = paragraphTexts[j].trim();
+                        if (nextText && 
+                            nextText.toLowerCase() !== 'job description' &&
+                            nextText.length > 3 &&
+                            nextText.length < 100 &&
+                            !nextText.toLowerCase().includes('client name')) {
+                            jobTitle = nextText;
+                            break;
+                        }
+                    }
+                }
+                
+                // Find version
+                const versionMatch = text.match(/version[:\s]*(\d+)/i);
                 if (versionMatch) {
                     version = versionMatch[1];
                 }
             }
             
-            // Clean up extracted values
-            clientName = clientName.replace(/[<>:"/\\|?*]/g, '').trim() || 'Unknown Client';
-            jobTitle = jobTitle.replace(/[<>:"/\\|?*]/g, '').trim() || 'Position';
+            // Clean up
+            clientName = clientName.replace(/[<>:"/\\|?*\r\n]/g, '').trim() || 'Unknown Client';
+            jobTitle = jobTitle.replace(/[<>:"/\\|?*\r\n]/g, '').trim() || 'Position';
+            
+            // Limit length
+            if (clientName.length > 50) clientName = clientName.substring(0, 50);
+            if (jobTitle.length > 50) jobTitle = jobTitle.substring(0, 50);
             
             return { clientName, jobTitle, version };
         }
@@ -638,28 +654,22 @@
         }
 
         async function createDocumentFromChunk(docZip, chunk, originalXmlDoc) {
-            // Clone the original XML document
             const newDoc = originalXmlDoc.cloneNode(true);
             const newBody = newDoc.getElementsByTagName('w:body')[0];
             
-            // Clear body
             while (newBody.firstChild) {
                 newBody.removeChild(newBody.firstChild);
             }
             
-            // Add chunk elements
             chunk.forEach(el => {
                 newBody.appendChild(el.cloneNode(true));
             });
             
-            // Serialize to string
             const serializer = new XMLSerializer();
             const newDocXml = serializer.serializeToString(newDoc);
             
-            // Create new zip
             const newZip = new JSZip();
             
-            // Copy all files from original
             const copyPromises = [];
             docZip.forEach((relativePath, file) => {
                 if (relativePath === 'word/document.xml') {
@@ -675,11 +685,9 @@
             
             await Promise.all(copyPromises);
             
-            // Generate blob
             return await newZip.generateAsync({type: 'blob'});
         }
 
-        // Download button
         downloadBtn.addEventListener('click', async () => {
             const zip = new JSZip();
             
@@ -694,7 +702,6 @@
             showAlert('Download started!', 'success');
         });
 
-        // Reset button
         resetBtn.addEventListener('click', () => {
             fileInput.value = '';
             resetFileInput();
