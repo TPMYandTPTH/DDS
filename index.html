@@ -297,10 +297,10 @@
                 <div class="info-box">
                     <h5><i class="fas fa-info-circle me-2"></i>How It Works</h5>
                     <ul style="margin: 0; padding-left: 20px;">
-                        <li>Finds "Client Name - Job Title" lines in document</li>
-                        <li>Extracts Job Code from header table (e.g., "Code: T-CS-01")</li>
+                        <li>Finds paragraphs with "Job Summary / Overview" marker</li>
+                        <li>Extracts "Client - Job Title" from end of paragraph</li>
+                        <li>Extracts Job Code from header table</li>
                         <li>Creates files: "Client - Job Title - Code.docx"</li>
-                        <li>Each file = exactly 2 pages</li>
                     </ul>
                 </div>
 
@@ -486,18 +486,25 @@
         });
 
         async function splitDocument(docZip) {
-            // Get document XML
             const docXml = await docZip.file('word/document.xml').async('string');
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(docXml, 'text/xml');
             const body = xmlDoc.getElementsByTagName('w:body')[0];
             const allParagraphs = Array.from(body.getElementsByTagName('w:p'));
             
-            // Get header XML files
-            const headerFiles = Object.keys(docZip.files).filter(f => f.startsWith('word/header'));
-            console.log('Header files found:', headerFiles);
+            // Get header files and create mapping
+            const headerFiles = Object.keys(docZip.files).filter(f => f.startsWith('word/header') && f.endsWith('.xml') && !f.includes('_rels'));
+            console.log('Header files:', headerFiles);
             
-            // Find all "Client - Job" lines
+            // Extract codes from all headers
+            const headerCodes = {};
+            for (const headerFile of headerFiles) {
+                const code = await extractJobCodeFromHeader(docZip, headerFile);
+                headerCodes[headerFile] = code;
+                console.log(`${headerFile} -> ${code}`);
+            }
+            
+            // Find marker paragraphs that contain "Job Summary / Overview"
             const jdMarkers = [];
             
             for (let i = 0; i < allParagraphs.length; i++) {
@@ -507,35 +514,53 @@
                 for (let t of textNodes) {
                     fullText += t.textContent;
                 }
-                fullText = fullText.trim();
                 
-                // Check if it's a client-job line - support all dash types (-, –, —)
-                const hasDash = fullText.includes('-') || fullText.includes('–') || fullText.includes('—');
-                
-                if (hasDash && 
-                    fullText.length > 5 &&
-                    !fullText.toLowerCase().includes('job description') &&
-                    !fullText.toLowerCase().includes('client name111') &&
-                    !fullText.toLowerCase().includes('page')) {
+                // Check if this paragraph contains "Job Summary / Overview"
+                if (fullText.includes('Job Summary / Overview') || fullText.includes('Job Summary/ Overview')) {
+                    // This is a marker paragraph - extract the client-job title from the END
+                    const runs = para.getElementsByTagName('w:r');
                     
-                    // Get corresponding header (find section for this paragraph)
-                    const sectionIndex = getSectionIndexForParagraph(xmlDoc, i);
-                    const headerFile = headerFiles[sectionIndex] || headerFiles[0];
-                    const jobCode = await extractJobCodeFromHeader(docZip, headerFile);
+                    // Get last few runs (where the client-job title is)
+                    let clientJobText = '';
+                    const lastRuns = [];
+                    for (let r = Math.max(0, runs.length - 5); r < runs.length; r++) {
+                        const run = runs[r];
+                        const runTexts = run.getElementsByTagName('w:t');
+                        for (let t of runTexts) {
+                            lastRuns.push(t.textContent);
+                        }
+                    }
                     
-                    jdMarkers.push({
-                        paraIndex: i,
-                        text: fullText,
-                        jobCode: jobCode
-                    });
+                    // Join the last runs to get the client-job title
+                    clientJobText = lastRuns.join('');
+                    
+                    // Clean it up - remove "Job Summary / Overview" if it's still there
+                    clientJobText = clientJobText.replace(/Job Summary.*?Overview/gi, '').trim();
+                    
+                    // Check if it has a dash and looks like a client-job line
+                    const hasDash = clientJobText.includes('-') || clientJobText.includes('–') || clientJobText.includes('—');
+                    
+                    if (clientJobText && hasDash && clientJobText.length > 3 && clientJobText.length < 100) {
+                        // Find which section this belongs to
+                        const sectionIdx = getSectionIndexForParagraph(allParagraphs, i);
+                        const headerFile = headerFiles[sectionIdx] || headerFiles[0];
+                        const jobCode = headerCodes[headerFile] || 'UNKNOWN';
+                        
+                        jdMarkers.push({
+                            paraIndex: i,
+                            text: clientJobText,
+                            jobCode: jobCode
+                        });
+                        
+                        console.log(`Found marker at para ${i}: "${clientJobText}" - Code: ${jobCode}`);
+                    }
                 }
             }
             
-            console.log(`Found ${jdMarkers.length} JD markers`);
-            jdMarkers.forEach((m, i) => console.log(`${i + 1}. "${m.text}" - Code: ${m.jobCode}`));
+            console.log(`\nTotal markers found: ${jdMarkers.length}`);
             
             if (jdMarkers.length === 0) {
-                throw new Error('No job descriptions found. Looking for format: "Client Name - Job Title"');
+                throw new Error('No job descriptions found. Looking for paragraphs with "Job Summary / Overview"');
             }
             
             // Split at each marker
@@ -561,10 +586,7 @@
                 if (chunk.length === 0) continue;
                 
                 // Create filename: "Client - Job Title - Code.docx"
-                // Use the original text as-is, just append the code
-                const filename = sanitizeFilename(
-                    `${marker.text} - ${marker.jobCode}.docx`
-                );
+                const filename = sanitizeFilename(`${marker.text} - ${marker.jobCode}.docx`);
                 
                 const blob = await createDocFromChunk(docZip, chunk, xmlDoc);
                 files.push({ name: filename, blob: blob });
@@ -573,9 +595,17 @@
             return files;
         }
 
-        function getSectionIndexForParagraph(xmlDoc, paraIndex) {
-            // Simplified: return 0 for now, can be enhanced to detect actual sections
-            return 0;
+        function getSectionIndexForParagraph(allParagraphs, paraIndex) {
+            // Count section breaks before this paragraph
+            let sectionCount = 0;
+            for (let i = 0; i < paraIndex; i++) {
+                const para = allParagraphs[i];
+                const sectPr = para.getElementsByTagName('w:sectPr');
+                if (sectPr.length > 0) {
+                    sectionCount++;
+                }
+            }
+            return sectionCount;
         }
 
         async function extractJobCodeFromHeader(docZip, headerFile) {
@@ -584,14 +614,12 @@
                 const parser = new DOMParser();
                 const headerDoc = parser.parseFromString(headerXml, 'text/xml');
                 
-                // Find tables in header
                 const tables = headerDoc.getElementsByTagName('w:tbl');
                 
                 if (tables.length > 0) {
                     const table = tables[0];
                     const rows = table.getElementsByTagName('w:tr');
                     
-                    // Look in first row for "Code:"
                     if (rows.length > 0) {
                         const row = rows[0];
                         const cells = row.getElementsByTagName('w:tc');
@@ -603,7 +631,6 @@
                                 cellText += t.textContent;
                             }
                             
-                            // Check if contains "Code:"
                             if (cellText.includes('Code:')) {
                                 const codeMatch = cellText.match(/Code:\s*(.+)/i);
                                 if (codeMatch && codeMatch[1]) {
@@ -634,7 +661,6 @@
         }
 
         function sanitizeFilename(filename) {
-            // Remove invalid characters for filenames
             return filename.replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, ' ').trim().substring(0, 200);
         }
 
@@ -642,7 +668,6 @@
             const newDoc = originalXmlDoc.cloneNode(true);
             const newBody = newDoc.getElementsByTagName('w:body')[0];
             
-            // Clear body and add chunk
             while (newBody.firstChild) newBody.removeChild(newBody.firstChild);
             chunk.forEach(el => newBody.appendChild(el.cloneNode(true)));
             
@@ -652,7 +677,6 @@
             const newZip = new JSZip();
             const copyPromises = [];
             
-            // Copy all files from original document
             docZip.forEach((relativePath, file) => {
                 if (relativePath === 'word/document.xml') {
                     newZip.file(relativePath, newDocXml);
