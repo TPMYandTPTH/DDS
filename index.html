@@ -297,10 +297,10 @@
                 <div class="info-box">
                     <h5><i class="fas fa-info-circle me-2"></i>How It Works</h5>
                     <ul style="margin: 0; padding-left: 20px;">
-                        <li>Finds paragraphs with "Job Summary / Overview" marker</li>
-                        <li>Extracts "Client - Job Title" from end of paragraph</li>
+                        <li>Finds paragraphs with "Job Summary / Overview" + Client-Job title</li>
                         <li>Extracts Job Code from header table</li>
                         <li>Creates files: "Client - Job Title - Code.docx"</li>
+                        <li>Each file = exactly 2 pages</li>
                     </ul>
                 </div>
 
@@ -327,7 +327,7 @@
                 <div class="progress-section" id="progress-section">
                     <div class="spinner"></div>
                     <h5 class="text-center mt-3">Processing your document...</h5>
-                    <p class="text-center text-muted">Extracting job details from headers and content...</p>
+                    <p class="text-center text-muted">Check browser console (F12) for detailed logs</p>
                 </div>
 
                 <!-- Alert Container -->
@@ -445,6 +445,10 @@
             resultSection.style.display = 'none';
             alertContainer.innerHTML = '';
 
+            console.log('='.repeat(80));
+            console.log('STARTING DOCUMENT PROCESSING');
+            console.log('='.repeat(80));
+
             try {
                 const arrayBuffer = await selectedFile.arrayBuffer();
                 const docZip = await JSZip.loadAsync(arrayBuffer);
@@ -478,24 +482,74 @@
                 resultSection.style.display = 'block';
                 showAlert(`Successfully created ${splitFiles.length} files!`, 'success');
             } catch (error) {
-                console.error('Error:', error);
+                console.error('ERROR:', error);
                 progressSection.style.display = 'none';
                 showAlert('Error: ' + error.message, 'danger');
                 splitBtn.disabled = false;
             }
         });
 
+        // Helper function to get all text from an element
+        function getAllText(element) {
+            let text = '';
+            const textNodes = element.querySelectorAll('*');
+            for (let node of textNodes) {
+                if (node.tagName && node.tagName.toLowerCase().endsWith(':t')) {
+                    text += node.textContent || '';
+                }
+            }
+            return text;
+        }
+
+        // Helper function to get text from last N runs
+        function getTextFromLastRuns(para, numRuns = 5) {
+            const runs = para.querySelectorAll('*');
+            const runElements = [];
+            
+            for (let elem of runs) {
+                if (elem.tagName && elem.tagName.toLowerCase().endsWith(':r')) {
+                    runElements.push(elem);
+                }
+            }
+            
+            let text = '';
+            const startIdx = Math.max(0, runElements.length - numRuns);
+            for (let i = startIdx; i < runElements.length; i++) {
+                text += getAllText(runElements[i]);
+            }
+            
+            return text;
+        }
+
         async function splitDocument(docZip) {
+            console.log('\n' + '='.repeat(80));
+            console.log('STEP 1: LOADING DOCUMENT XML');
+            console.log('='.repeat(80));
+            
             const docXml = await docZip.file('word/document.xml').async('string');
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(docXml, 'text/xml');
-            const body = xmlDoc.getElementsByTagName('w:body')[0];
-            const allParagraphs = Array.from(body.getElementsByTagName('w:p'));
+            const body = xmlDoc.querySelector('body') || xmlDoc.documentElement;
             
-            // Build rId to header file mapping
+            // Get all paragraphs
+            const allElements = body.querySelectorAll('*');
+            const allParagraphs = [];
+            for (let elem of allElements) {
+                if (elem.tagName && elem.tagName.toLowerCase().endsWith(':p')) {
+                    allParagraphs.push(elem);
+                }
+            }
+            
+            console.log(`Total paragraphs found: ${allParagraphs.length}`);
+            
+            // STEP 2: Build rId to header mapping
+            console.log('\n' + '='.repeat(80));
+            console.log('STEP 2: BUILDING RID TO HEADER MAPPING');
+            console.log('='.repeat(80));
+            
             const relsXml = await docZip.file('word/_rels/document.xml.rels').async('string');
             const relsDoc = parser.parseFromString(relsXml, 'text/xml');
-            const relationships = relsDoc.getElementsByTagName('Relationship');
+            const relationships = relsDoc.querySelectorAll('Relationship');
             
             const ridToHeader = {};
             for (let rel of relationships) {
@@ -503,91 +557,107 @@
                 const target = rel.getAttribute('Target');
                 if (target && target.includes('header')) {
                     ridToHeader[relId] = 'word/' + target;
+                    console.log(`  ${relId} -> ${ridToHeader[relId]}`);
                 }
             }
             
-            console.log('rId to Header mapping:', ridToHeader);
+            // STEP 3: Build section map
+            console.log('\n' + '='.repeat(80));
+            console.log('STEP 3: BUILDING SECTION MAP');
+            console.log('='.repeat(80));
             
-            // Build section map - find all section breaks
             const sections = [];
             for (let i = 0; i < allParagraphs.length; i++) {
                 const para = allParagraphs[i];
-                const sectPr = para.getElementsByTagName('w:sectPr');
+                const sectPrElements = para.querySelectorAll('*');
                 
-                if (sectPr.length > 0) {
-                    const headerRef = sectPr[0].getElementsByTagName('w:headerReference');
-                    if (headerRef.length > 0) {
-                        const rId = headerRef[0].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
-                        const headerFile = ridToHeader[rId];
-                        sections.push({
-                            endPara: i,
-                            rId: rId,
-                            headerFile: headerFile
-                        });
-                        console.log(`Section ends at para ${i}, rId=${rId}, header=${headerFile}`);
+                for (let elem of sectPrElements) {
+                    if (elem.tagName && elem.tagName.toLowerCase().endsWith(':sectpr')) {
+                        // Found section properties
+                        const headerRefs = elem.querySelectorAll('*');
+                        for (let headerRef of headerRefs) {
+                            if (headerRef.tagName && headerRef.tagName.toLowerCase().endsWith(':headerreference')) {
+                                // Get the rId attribute
+                                const rId = headerRef.getAttribute('r:id') || 
+                                           headerRef.getAttribute('w:id') ||
+                                           headerRef.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+                                
+                                if (rId && ridToHeader[rId]) {
+                                    const headerFile = ridToHeader[rId];
+                                    sections.push({
+                                        endPara: i,
+                                        rId: rId,
+                                        headerFile: headerFile
+                                    });
+                                    console.log(`  Section ends at para ${i}: rId=${rId}, header=${headerFile}`);
+                                }
+                            }
+                        }
                     }
                 }
             }
             
-            // Extract codes from all headers
+            console.log(`Total sections found: ${sections.length}`);
+            
+            // STEP 4: Extract codes from headers
+            console.log('\n' + '='.repeat(80));
+            console.log('STEP 4: EXTRACTING CODES FROM HEADERS');
+            console.log('='.repeat(80));
+            
             const headerCodes = {};
             for (const rId in ridToHeader) {
                 const headerFile = ridToHeader[rId];
                 const code = await extractJobCodeFromHeader(docZip, headerFile);
                 headerCodes[headerFile] = code;
-                console.log(`${headerFile} -> ${code}`);
+                console.log(`  ${headerFile} -> ${code}`);
             }
             
-            // Find marker paragraphs that contain "Job Summary / Overview"
+            // STEP 5: Find marker paragraphs
+            console.log('\n' + '='.repeat(80));
+            console.log('STEP 5: FINDING MARKER PARAGRAPHS');
+            console.log('='.repeat(80));
+            
             const jdMarkers = [];
+            let jobSummaryCount = 0;
             
             for (let i = 0; i < allParagraphs.length; i++) {
                 const para = allParagraphs[i];
-                const textNodes = para.getElementsByTagName('w:t');
-                let fullText = '';
-                for (let t of textNodes) {
-                    fullText += t.textContent;
-                }
+                const fullText = getAllText(para);
                 
-                // Check if this paragraph contains "Job Summary / Overview"
-                if (fullText.includes('Job Summary / Overview') || fullText.includes('Job Summary/ Overview')) {
-                    // This is a marker paragraph - extract the client-job title from the END
-                    const runs = para.getElementsByTagName('w:r');
+                // Check if contains "Job Summary / Overview" or "Job Summary/ Overview"
+                if ((fullText.includes('Job Summary / Overview') || fullText.includes('Job Summary/ Overview')) &&
+                    fullText.length > 30) {  // Must have more content than just the marker
                     
-                    // Get last few runs (where the client-job title is)
-                    let clientJobText = '';
-                    const lastRuns = [];
-                    for (let r = Math.max(0, runs.length - 5); r < runs.length; r++) {
-                        const run = runs[r];
-                        const runTexts = run.getElementsByTagName('w:t');
-                        for (let t of runTexts) {
-                            lastRuns.push(t.textContent);
-                        }
-                    }
+                    jobSummaryCount++;
+                    console.log(`\nPara ${i}: Contains "Job Summary / Overview"`);
+                    console.log(`  Full text (first 100 chars): ${fullText.substring(0, 100)}...`);
                     
-                    // Join the last runs to get the client-job title
-                    clientJobText = lastRuns.join('');
+                    // Extract text from last runs
+                    const lastRunsText = getTextFromLastRuns(para, 8);
+                    console.log(`  Last runs text: "${lastRunsText}"`);
                     
-                    // Clean it up - remove "Job Summary / Overview" if it's still there
-                    clientJobText = clientJobText.replace(/Job Summary.*?Overview/gi, '').trim();
+                    // Clean up - remove "Job Summary / Overview"
+                    let clientJobText = lastRunsText.replace(/Job Summary\s*\/?\s*Overview/gi, '').trim();
+                    console.log(`  After cleanup: "${clientJobText}"`);
                     
-                    // Check if it has a dash and looks like a client-job line
+                    // Check if has dash and valid length
                     const hasDash = clientJobText.includes('-') || clientJobText.includes('–') || clientJobText.includes('—');
+                    console.log(`  Has dash: ${hasDash}, Length: ${clientJobText.length}`);
                     
                     if (clientJobText && hasDash && clientJobText.length > 3 && clientJobText.length < 100) {
-                        // Find which section this paragraph belongs to
-                        // The section is determined by the NEXT section break AT OR AFTER this paragraph
+                        // Find which section this belongs to
                         let headerFile = null;
                         for (let section of sections) {
                             if (i <= section.endPara) {
                                 headerFile = section.headerFile;
+                                console.log(`  Mapped to section ending at para ${section.endPara}: ${headerFile}`);
                                 break;
                             }
                         }
                         
-                        // If no section found, use the last section (or first)
                         if (!headerFile && sections.length > 0) {
-                            headerFile = sections[sections.length - 1].headerFile;
+                            headerFile = sections[0].headerFile;
+                            console.log(`  No section found, using first: ${headerFile}`);
                         }
                         
                         const jobCode = headerCodes[headerFile] || 'UNKNOWN';
@@ -599,18 +669,32 @@
                             headerFile: headerFile
                         });
                         
-                        console.log(`Found marker at para ${i}: "${clientJobText}" - Header: ${headerFile} - Code: ${jobCode}`);
+                        console.log(`  ✓ VALID MARKER: "${clientJobText}" - Code: ${jobCode}`);
+                    } else {
+                        console.log(`  ✗ INVALID: Not a valid client-job line`);
                     }
                 }
             }
             
-            console.log(`\nTotal markers found: ${jdMarkers.length}`);
+            console.log('\n' + '='.repeat(80));
+            console.log('MARKER SUMMARY');
+            console.log('='.repeat(80));
+            console.log(`Paragraphs with "Job Summary / Overview": ${jobSummaryCount}`);
+            console.log(`Valid JD markers: ${jdMarkers.length}`);
             
             if (jdMarkers.length === 0) {
-                throw new Error('No job descriptions found. Looking for paragraphs with "Job Summary / Overview"');
+                throw new Error(`No job descriptions found. Found ${jobSummaryCount} "Job Summary / Overview" paragraphs but none had valid client-job titles.`);
             }
             
-            // Split at each marker
+            jdMarkers.forEach((m, idx) => {
+                console.log(`  ${idx + 1}. Para ${m.paraIndex}: "${m.text}" - ${m.jobCode}`);
+            });
+            
+            // STEP 6: Split and create files
+            console.log('\n' + '='.repeat(80));
+            console.log('STEP 6: CREATING FILES');
+            console.log('='.repeat(80));
+            
             const files = [];
             const bodyElements = Array.from(body.children);
             
@@ -618,28 +702,48 @@
                 const marker = jdMarkers[i];
                 
                 // Find start index in body elements
-                let startIdx = findElementIndexByParagraphIndex(bodyElements, marker.paraIndex);
+                let startIdx = findElementIndexByParagraphIndex(bodyElements, allParagraphs, marker.paraIndex);
                 
-                // Find end (next marker or end of document)
+                // Find end
                 let endIdx;
                 if (i + 1 < jdMarkers.length) {
-                    endIdx = findElementIndexByParagraphIndex(bodyElements, jdMarkers[i + 1].paraIndex);
+                    endIdx = findElementIndexByParagraphIndex(bodyElements, allParagraphs, jdMarkers[i + 1].paraIndex);
                 } else {
                     endIdx = bodyElements.length;
                 }
                 
+                console.log(`  File ${i + 1}: Elements ${startIdx} to ${endIdx} (${endIdx - startIdx} elements)`);
+                
                 const chunk = bodyElements.slice(startIdx, endIdx);
                 
-                if (chunk.length === 0) continue;
+                if (chunk.length === 0) {
+                    console.log(`    WARNING: Empty chunk, skipping`);
+                    continue;
+                }
                 
-                // Create filename: "Client - Job Title - Code.docx"
+                // Create filename
                 const filename = sanitizeFilename(`${marker.text} - ${marker.jobCode}.docx`);
+                console.log(`    Filename: ${filename}`);
                 
                 const blob = await createDocFromChunk(docZip, chunk, xmlDoc);
                 files.push({ name: filename, blob: blob });
             }
             
+            console.log('\n' + '='.repeat(80));
+            console.log(`COMPLETE: Created ${files.length} files`);
+            console.log('='.repeat(80));
+            
             return files;
+        }
+
+        function findElementIndexByParagraphIndex(bodyElements, allParagraphs, targetParaIndex) {
+            const targetPara = allParagraphs[targetParaIndex];
+            for (let i = 0; i < bodyElements.length; i++) {
+                if (bodyElements[i] === targetPara) {
+                    return i;
+                }
+            }
+            return 0;
         }
 
         async function extractJobCodeFromHeader(docZip, headerFile) {
@@ -648,50 +752,24 @@
                 const parser = new DOMParser();
                 const headerDoc = parser.parseFromString(headerXml, 'text/xml');
                 
-                const tables = headerDoc.getElementsByTagName('w:tbl');
+                // Find all elements
+                const allElements = headerDoc.querySelectorAll('*');
                 
-                if (tables.length > 0) {
-                    const table = tables[0];
-                    const rows = table.getElementsByTagName('w:tr');
-                    
-                    if (rows.length > 0) {
-                        const row = rows[0];
-                        const cells = row.getElementsByTagName('w:tc');
-                        
-                        for (let cell of cells) {
-                            const textNodes = cell.getElementsByTagName('w:t');
-                            let cellText = '';
-                            for (let t of textNodes) {
-                                cellText += t.textContent;
-                            }
-                            
-                            if (cellText.includes('Code:')) {
-                                const codeMatch = cellText.match(/Code:\s*(.+)/i);
-                                if (codeMatch && codeMatch[1]) {
-                                    return codeMatch[1].trim();
-                                }
-                            }
+                // Look for table cells containing "Code:"
+                for (let elem of allElements) {
+                    const text = getAllText(elem);
+                    if (text.includes('Code:')) {
+                        const match = text.match(/Code:\s*(.+)/i);
+                        if (match && match[1]) {
+                            return match[1].trim();
                         }
                     }
                 }
             } catch (e) {
-                console.log('Could not extract job code from header:', e);
+                console.log(`Could not extract code from ${headerFile}:`, e);
             }
             
             return 'UNKNOWN';
-        }
-
-        function findElementIndexByParagraphIndex(elements, targetParaIndex) {
-            let paraCount = 0;
-            for (let i = 0; i < elements.length; i++) {
-                if (elements[i].tagName.endsWith(':p')) {
-                    if (paraCount === targetParaIndex) {
-                        return i;
-                    }
-                    paraCount++;
-                }
-            }
-            return elements.length;
         }
 
         function sanitizeFilename(filename) {
@@ -700,9 +778,14 @@
 
         async function createDocFromChunk(docZip, chunk, originalXmlDoc) {
             const newDoc = originalXmlDoc.cloneNode(true);
-            const newBody = newDoc.getElementsByTagName('w:body')[0];
+            const newBody = newDoc.querySelector('body') || newDoc.documentElement;
             
-            while (newBody.firstChild) newBody.removeChild(newBody.firstChild);
+            // Clear body
+            while (newBody.firstChild) {
+                newBody.removeChild(newBody.firstChild);
+            }
+            
+            // Add chunk
             chunk.forEach(el => newBody.appendChild(el.cloneNode(true)));
             
             const serializer = new XMLSerializer();
