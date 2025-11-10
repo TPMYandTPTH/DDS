@@ -297,9 +297,9 @@
                 <div class="info-box">
                     <h5><i class="fas fa-info-circle me-2"></i>How It Works</h5>
                     <ul style="margin: 0; padding-left: 20px;">
-                        <li>Finds "Client Name – Job Title" on page 1</li>
-                        <li>Extracts Job Code from header table</li>
-                        <li>Creates files: "Job Description - Client - Title - Code XXX.docx"</li>
+                        <li>Finds "Client Name - Job Title" lines in document</li>
+                        <li>Extracts Job Code from header table (e.g., "Code: T-CS-01")</li>
+                        <li>Creates files: "Client - Job Title - Code.docx"</li>
                         <li>Each file = exactly 2 pages</li>
                     </ul>
                 </div>
@@ -497,7 +497,7 @@
             const headerFiles = Object.keys(docZip.files).filter(f => f.startsWith('word/header'));
             console.log('Header files found:', headerFiles);
             
-            // Find all "Client – Job" lines
+            // Find all "Client - Job" lines
             const jdMarkers = [];
             
             for (let i = 0; i < allParagraphs.length; i++) {
@@ -509,8 +509,10 @@
                 }
                 fullText = fullText.trim();
                 
-                // Check if it's a client-job line
-                if (fullText.includes('–') && 
+                // Check if it's a client-job line - support all dash types (-, –, —)
+                const hasDash = fullText.includes('-') || fullText.includes('–') || fullText.includes('—');
+                
+                if (hasDash && 
                     fullText.length > 5 &&
                     !fullText.toLowerCase().includes('job description') &&
                     !fullText.toLowerCase().includes('client name111') &&
@@ -533,7 +535,7 @@
             jdMarkers.forEach((m, i) => console.log(`${i + 1}. "${m.text}" - Code: ${m.jobCode}`));
             
             if (jdMarkers.length === 0) {
-                throw new Error('No job descriptions found. Looking for format: "Client Name – Job Title"');
+                throw new Error('No job descriptions found. Looking for format: "Client Name - Job Title"');
             }
             
             // Split at each marker
@@ -558,13 +560,10 @@
                 
                 if (chunk.length === 0) continue;
                 
-                // Parse the marker line
-                const { clientName, jobTitle } = parseClientJobLine(marker.text);
-                const jobCode = marker.jobCode;
-                
-                // Create filename
+                // Create filename: "Client - Job Title - Code.docx"
+                // Use the original text as-is, just append the code
                 const filename = sanitizeFilename(
-                    `Job Description - ${clientName} - ${jobTitle} - Code ${jobCode}.docx`
+                    `${marker.text} - ${marker.jobCode}.docx`
                 );
                 
                 const blob = await createDocFromChunk(docZip, chunk, xmlDoc);
@@ -575,7 +574,7 @@
         }
 
         function getSectionIndexForParagraph(xmlDoc, paraIndex) {
-            // Simplified: return 0 for now, can be enhanced
+            // Simplified: return 0 for now, can be enhanced to detect actual sections
             return 0;
         }
 
@@ -634,33 +633,8 @@
             return elements.length;
         }
 
-        function parseClientJobLine(text) {
-            let clientName = 'Client';
-            let jobTitle = 'Position';
-            
-            // Remove markers if present
-            text = text.replace(/111/g, '').replace(/112/g, '');
-            
-            // Split by dash
-            const parts = text.split(/[–—-]/);
-            
-            if (parts.length >= 2) {
-                clientName = parts[0].trim();
-                jobTitle = parts[1].trim();
-            }
-            
-            // Clean
-            clientName = clientName.replace(/[<>:"/\\|?*]/g, '').trim() || 'Client';
-            jobTitle = jobTitle.replace(/[<>:"/\\|?*]/g, '').trim() || 'Position';
-            
-            // Limit length
-            if (clientName.length > 50) clientName = clientName.substring(0, 50);
-            if (jobTitle.length > 50) jobTitle = jobTitle.substring(0, 50);
-            
-            return { clientName, jobTitle };
-        }
-
         function sanitizeFilename(filename) {
+            // Remove invalid characters for filenames
             return filename.replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, ' ').trim().substring(0, 200);
         }
 
@@ -668,6 +642,7 @@
             const newDoc = originalXmlDoc.cloneNode(true);
             const newBody = newDoc.getElementsByTagName('w:body')[0];
             
+            // Clear body and add chunk
             while (newBody.firstChild) newBody.removeChild(newBody.firstChild);
             chunk.forEach(el => newBody.appendChild(el.cloneNode(true)));
             
@@ -677,6 +652,7 @@
             const newZip = new JSZip();
             const copyPromises = [];
             
+            // Copy all files from original document
             docZip.forEach((relativePath, file) => {
                 if (relativePath === 'word/document.xml') {
                     newZip.file(relativePath, newDocXml);
