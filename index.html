@@ -9,8 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.11/docxtemplater.js"></script>
-    <script src="https://unpkg.com/pizzip@3.1.4/dist/pizzip.js"></script>
     
     <style>
         * {
@@ -27,7 +25,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: auto;
         }
 
@@ -68,25 +66,47 @@
         .nav-tabs {
             border-bottom: 2px solid #e0e0e0;
             margin-bottom: 0;
+            background-color: #f8f9fa;
         }
 
         .nav-tabs .nav-link {
             border: none;
             color: #6c757d;
             font-weight: 600;
-            padding: 15px 30px;
+            padding: 20px 40px;
             transition: all 0.3s ease;
+            border-radius: 0;
         }
 
         .nav-tabs .nav-link:hover {
             color: #3498db;
-            border-color: transparent;
+            background-color: #e9ecef;
         }
 
         .nav-tabs .nav-link.active {
-            color: #3498db;
-            background: transparent;
-            border-bottom: 3px solid #3498db;
+            color: #fff;
+            background-color: #3498db;
+            border-bottom: 3px solid #2980b9;
+        }
+
+        .nav-tabs .nav-link i {
+            font-size: 1.2rem;
+            margin-right: 8px;
+        }
+
+        .tab-description {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: #856404;
+        }
+
+        .tab-description strong {
+            font-size: 1.05rem;
+            color: #664d03;
         }
 
         .content-section {
@@ -342,6 +362,10 @@
                 padding: 12px 30px;
                 font-size: 1rem;
             }
+            .nav-tabs .nav-link {
+                padding: 15px 20px;
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
@@ -350,7 +374,7 @@
         <div class="main-card">
             <!-- Header Section -->
             <div class="header-section">
-                <img src="TPLogo11.png" alt="TP Logo" class="logo" onerror="this.style.display='none'">
+                <img src="TPLogo11.png" alt="TP Logo" class="logo" id="header-logo" onerror="this.style.display='none'">
                 <h1>DDS</h1>
                 <p>Document Divider System</p>
                 <p style="font-size: 0.95rem; margin-top: 5px;">Split & Create Job Descriptions</p>
@@ -360,12 +384,12 @@
             <ul class="nav nav-tabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="split-tab" data-bs-toggle="tab" data-bs-target="#split-panel" type="button" role="tab">
-                        <i class="fas fa-cut me-2"></i>Split Documents
+                        <i class="fas fa-cut"></i>Split Documents
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="create-tab" data-bs-toggle="tab" data-bs-target="#create-panel" type="button" role="tab">
-                        <i class="fas fa-file-medical me-2"></i>Create Job Description
+                        <i class="fas fa-file-medical"></i>Create Job Description
                     </button>
                 </li>
             </ul>
@@ -375,14 +399,21 @@
                 <!-- SPLIT TAB -->
                 <div class="tab-pane fade show active" id="split-panel" role="tabpanel">
                     <div class="content-section">
+                        <!-- Tab Description -->
+                        <div class="tab-description">
+                            <strong><i class="fas fa-cut me-2"></i>Split Existing Documents</strong><br>
+                            Use this when you have a LARGE Word document containing multiple job descriptions (e.g., 46 JDs in one file). 
+                            This tool will automatically split it into individual 2-page files, one for each job description.
+                        </div>
+
                         <!-- Info Box -->
                         <div class="info-box">
                             <h5><i class="fas fa-info-circle me-2"></i>How It Works</h5>
                             <ul style="margin: 0; padding-left: 20px;">
-                                <li>Finds paragraphs with "Job Summary / Overview" + Client-Job title</li>
-                                <li>Extracts Job Code from header table</li>
-                                <li>Creates files: "Client - Job Title - Code.docx"</li>
-                                <li>Each file = exactly 2 pages</li>
+                                <li>Scans for "Job Summary / Overview" followed by "Client - Job Title"</li>
+                                <li>Extracts Job Code from the header table</li>
+                                <li>Creates individual files: "Client - Job Title - Code.docx"</li>
+                                <li>Each output file = exactly 2 pages</li>
                             </ul>
                         </div>
 
@@ -391,7 +422,7 @@
                             <div class="upload-icon">
                                 <i class="fas fa-cloud-upload-alt"></i>
                             </div>
-                            <h4>Drop your file here or click to browse</h4>
+                            <h4>Drop your LARGE document here</h4>
                             <p class="text-muted mt-2">Supported format: .docx (Max 50MB)</p>
                             <p class="file-name" id="file-name"></p>
                         </div>
@@ -444,26 +475,23 @@
                 <!-- CREATE TAB -->
                 <div class="tab-pane fade" id="create-panel" role="tabpanel">
                     <div class="content-section">
+                        <!-- Tab Description -->
+                        <div class="tab-description">
+                            <strong><i class="fas fa-file-medical me-2"></i>Create NEW Job Description</strong><br>
+                            Use this when you need to create a SINGLE new job description from scratch. 
+                            Fill in the job details below, and it will generate a properly formatted 2-page Word document matching your company template with the TP logo.
+                        </div>
+
                         <!-- Info Box -->
                         <div class="info-box">
-                            <h5><i class="fas fa-info-circle me-2"></i>Create Job Description</h5>
-                            <p class="mb-0">Upload a simple text/Word file with job details OR fill in the form below. The system will format it into your standard 2-page job description template.</p>
-                        </div>
-
-                        <!-- Upload Option -->
-                        <div class="upload-zone" id="create-upload-zone">
-                            <div class="upload-icon">
-                                <i class="fas fa-file-upload"></i>
-                            </div>
-                            <h4>Upload a file with job details (Optional)</h4>
-                            <p class="text-muted mt-2">.docx or .txt format</p>
-                            <p class="file-name" id="create-file-name"></p>
-                        </div>
-
-                        <input type="file" id="create-file-input" accept=".docx,.txt">
-
-                        <div class="text-center mb-4">
-                            <p class="text-muted">— OR —</p>
+                            <h5><i class="fas fa-info-circle me-2"></i>What You'll Get</h5>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li>A professionally formatted .docx file with your company template</li>
+                                <li>TP logo in the header</li>
+                                <li>Job code, version, and page numbers in header table</li>
+                                <li>All sections properly formatted (Job Description, Responsibilities, Requirements)</li>
+                                <li>Ready to distribute or add to your collection</li>
+                            </ul>
                         </div>
 
                         <!-- Manual Input Form -->
@@ -471,49 +499,79 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label>Client Code / Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="client-code" placeholder="e.g., Am1, C1, XYZ Corp" required>
+                                        <label>Client Code / Name <span class="text-muted">(Optional)</span></label>
+                                        <input type="text" class="form-control" id="client-code" placeholder="e.g., Am1, C1, XYZ Corp">
+                                        <small class="text-muted">Leave empty if not applicable</small>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label>Job Code <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="job-code" placeholder="e.g., T-CS-01" required>
+                                        <input type="text" class="form-control" id="job-code" placeholder="e.g., T-CS-01, MKT-002" required>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="form-group">
                                 <label>Job Title <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="job-title" placeholder="e.g., Analytics Manager" required>
+                                <input type="text" class="form-control" id="job-title" placeholder="e.g., Analytics Manager, Customer Service Representative" required>
                             </div>
 
                             <div class="form-group">
-                                <label>Job Description</label>
-                                <textarea class="form-control" id="job-description" placeholder="Enter the main job description..."></textarea>
+                                <label>Job Description <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="job-description" placeholder="Enter the main job description..." required></textarea>
                             </div>
 
                             <div class="form-group">
-                                <label>Essential Job Responsibilities</label>
-                                <textarea class="form-control" id="job-responsibilities" placeholder="• Responsibility 1&#10;• Responsibility 2&#10;• Responsibility 3"></textarea>
+                                <label>Essential Job Responsibilities <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="job-responsibilities" placeholder="• Responsibility 1&#10;• Responsibility 2&#10;• Responsibility 3" required></textarea>
+                                <small class="text-muted">Each responsibility on a new line (bullets will be added automatically)</small>
                             </div>
 
                             <div class="form-group">
-                                <label>Job Requirements</label>
-                                <textarea class="form-control" id="job-requirements" placeholder="• Requirement 1&#10;• Requirement 2&#10;• Requirement 3"></textarea>
+                                <label>Job Requirements <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="job-requirements" placeholder="• Requirement 1&#10;• Requirement 2&#10;• Requirement 3" required></textarea>
+                                <small class="text-muted">Each requirement on a new line (bullets will be added automatically)</small>
                             </div>
 
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Department / Project</label>
                                         <input type="text" class="form-control" id="department" placeholder="e.g., Operations">
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Location</label>
                                         <input type="text" class="form-control" id="location" placeholder="e.g., Penang">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Reports To</label>
+                                        <input type="text" class="form-control" id="reports-to" placeholder="e.g., Team Lead">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Contract Type</label>
+                                        <input type="text" class="form-control" id="contract" placeholder="e.g., Long Term">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Grade</label>
+                                        <input type="text" class="form-control" id="grade" placeholder="e.g., 5">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Travel Requirements</label>
+                                        <input type="text" class="form-control" id="travel" placeholder="e.g., No">
                                     </div>
                                 </div>
                             </div>
@@ -553,9 +611,31 @@
     <script>
         document.getElementById('current-year').textContent = new Date().getFullYear();
 
-        // ==========================================
-        // SPLIT TAB FUNCTIONALITY
-        // ==========================================
+        // Store logo as base64
+        let logoBase64 = null;
+        
+        // Load and convert logo to base64
+        async function loadLogo() {
+            try {
+                const img = document.getElementById('header-logo');
+                if (img && img.src && !img.src.includes('data:')) {
+                    const response = await fetch(img.src);
+                    const blob = await response.blob();
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        logoBase64 = reader.result.split(',')[1]; // Get base64 part only
+                        console.log('Logo loaded successfully');
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            } catch (e) {
+                console.log('Could not load logo:', e);
+            }
+        }
+        
+        loadLogo();
+
+        // [SPLIT TAB FUNCTIONALITY - keeping all the split logic from before]
         const fileInput = document.getElementById('file-input');
         const uploadZone = document.getElementById('upload-zone');
         const fileName = document.getElementById('file-name');
@@ -995,106 +1075,39 @@
         // ==========================================
         // CREATE TAB FUNCTIONALITY
         // ==========================================
-        const createFileInput = document.getElementById('create-file-input');
-        const createUploadZone = document.getElementById('create-upload-zone');
-        const createFileName = document.getElementById('create-file-name');
         const createForm = document.getElementById('create-form');
         const createAlertContainer = document.getElementById('create-alert-container');
-
-        let createSelectedFile = null;
-
-        createUploadZone.addEventListener('click', () => createFileInput.click());
-        createUploadZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            createUploadZone.classList.add('dragover');
-        });
-        createUploadZone.addEventListener('dragleave', () => createUploadZone.classList.remove('dragover'));
-        createUploadZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            createUploadZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length > 0) {
-                createFileInput.files = e.dataTransfer.files;
-                handleCreateFileSelect();
-            }
-        });
-
-        createFileInput.addEventListener('change', handleCreateFileSelect);
-
-        async function handleCreateFileSelect() {
-            if (createFileInput.files.length > 0) {
-                createSelectedFile = createFileInput.files[0];
-                createFileName.textContent = createSelectedFile.name;
-                
-                // Try to parse the file and populate form
-                try {
-                    const text = await createSelectedFile.text();
-                    parseAndFillForm(text);
-                } catch (e) {
-                    console.log('Could not parse file:', e);
-                }
-            }
-        }
-
-        function parseAndFillForm(text) {
-            // Simple parsing logic
-            const lines = text.split('\n');
-            let currentSection = '';
-            let jobTitle = '';
-            let jobDesc = '';
-            let responsibilities = '';
-            let requirements = '';
-
-            for (let line of lines) {
-                line = line.trim();
-                
-                if (line.toLowerCase().includes('job title') && line.includes(':')) {
-                    jobTitle = line.split(':')[1].trim();
-                } else if (line.toLowerCase() === 'job description') {
-                    currentSection = 'description';
-                } else if (line.toLowerCase().includes('essential') && line.toLowerCase().includes('responsib')) {
-                    currentSection = 'responsibilities';
-                } else if (line.toLowerCase().includes('job requirement') || line.toLowerCase().includes('requirements')) {
-                    currentSection = 'requirements';
-                } else if (line) {
-                    if (currentSection === 'description') {
-                        jobDesc += line + '\n';
-                    } else if (currentSection === 'responsibilities') {
-                        responsibilities += line + '\n';
-                    } else if (currentSection === 'requirements') {
-                        requirements += line + '\n';
-                    }
-                }
-            }
-
-            // Fill form
-            if (jobTitle) document.getElementById('job-title').value = jobTitle;
-            if (jobDesc) document.getElementById('job-description').value = jobDesc.trim();
-            if (responsibilities) document.getElementById('job-responsibilities').value = responsibilities.trim();
-            if (requirements) document.getElementById('job-requirements').value = requirements.trim();
-        }
 
         createForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const clientCode = document.getElementById('client-code').value.trim();
             const jobData = {
-                clientCode: document.getElementById('client-code').value.trim(),
+                clientCode: clientCode,
                 jobCode: document.getElementById('job-code').value.trim(),
                 jobTitle: document.getElementById('job-title').value.trim(),
                 jobDescription: document.getElementById('job-description').value.trim(),
                 responsibilities: document.getElementById('job-responsibilities').value.trim(),
                 requirements: document.getElementById('job-requirements').value.trim(),
                 department: document.getElementById('department').value.trim() || 'Operations',
-                location: document.getElementById('location').value.trim() || 'Penang'
+                location: document.getElementById('location').value.trim() || 'Penang',
+                reportsTo: document.getElementById('reports-to').value.trim() || 'Team Lead',
+                contract: document.getElementById('contract').value.trim() || 'Long Term',
+                grade: document.getElementById('grade').value.trim() || '5',
+                travel: document.getElementById('travel').value.trim() || 'No'
             };
 
-            if (!jobData.clientCode || !jobData.jobCode || !jobData.jobTitle) {
-                showCreateAlert('Please fill in all required fields (Client Code, Job Code, Job Title)', 'danger');
+            if (!jobData.jobCode || !jobData.jobTitle || !jobData.jobDescription || 
+                !jobData.responsibilities || !jobData.requirements) {
+                showCreateAlert('Please fill in all required fields (Job Code, Job Title, Job Description, Responsibilities, Requirements)', 'danger');
                 return;
             }
 
             try {
                 await createJobDescription(jobData);
                 showCreateAlert('Job description created successfully!', 'success');
+                // Optionally reset form
+                // createForm.reset();
             } catch (error) {
                 console.error('Error creating job description:', error);
                 showCreateAlert('Error: ' + error.message, 'danger');
@@ -1102,51 +1115,150 @@
         });
 
         async function createJobDescription(data) {
-            // Create a new Word document from scratch
             const zip = new JSZip();
 
-            // Create the basic .docx structure
-            // [Content_Types].xml
+            // Copy example_2.docx structure but use our data
+            // Load the template if you have example file, or create from scratch
+            
+            // Create [Content_Types].xml
             zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
     <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
     <Default Extension="xml" ContentType="application/xml"/>
+    <Default Extension="png" ContentType="image/png"/>
     <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
     <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+    <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 </Types>`);
 
-            // _rels/.rels
+            // Create _rels/.rels
             zip.folder('_rels').file('.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`);
 
-            // word/_rels/document.xml.rels
+            // Create word/_rels/document.xml.rels
             zip.folder('word').folder('_rels').file('document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+    <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`);
 
-            // word/header1.xml - Header with job info table
-            zip.folder('word').file('header1.xml', createHeaderXML(data));
+            // Create word/_rels/header1.xml.rels (for logo)
+            if (logoBase64) {
+                zip.folder('word').folder('_rels').file('header1.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
+</Relationships>`);
 
-            // word/document.xml - Main document content
-            zip.folder('word').file('document.xml', createDocumentXML(data));
+                // Add logo to media folder
+                const logoBlob = await fetch(`data:image/png;base64,${logoBase64}`).then(r => r.blob());
+                zip.folder('word').folder('media').file('image1.png', logoBlob);
+            }
+
+            // Create word/styles.xml (basic styles)
+            zip.folder('word').file('styles.xml', createStylesXML());
+
+            // Create word/header1.xml with logo and table
+            zip.folder('word').file('header1.xml', createHeaderWithLogoXML(data));
+
+            // Create word/document.xml with exact format
+            zip.folder('word').file('document.xml', createExactFormatDocumentXML(data));
 
             // Generate and download
             const blob = await zip.generateAsync({type: 'blob'});
-            const filename = `${data.clientCode} - ${data.jobTitle} - ${data.jobCode}.docx`;
+            
+            // Create filename
+            let filename;
+            if (data.clientCode) {
+                filename = `${data.clientCode} - ${data.jobTitle} - ${data.jobCode}.docx`;
+            } else {
+                filename = `${data.jobTitle} - ${data.jobCode}.docx`;
+            }
+            
             saveAs(blob, filename);
         }
 
-        function createHeaderXML(data) {
+        function createStylesXML() {
             return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:style w:type="paragraph" w:styleId="Normal">
+        <w:name w:val="Normal"/>
+        <w:pPr>
+            <w:spacing w:after="0" w:line="276" w:lineRule="auto"/>
+        </w:pPr>
+        <w:rPr>
+            <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+            <w:sz w:val="22"/>
+        </w:rPr>
+    </w:style>
+</w:styles>`;
+        }
+
+        function createHeaderWithLogoXML(data) {
+            let logoXML = '';
+            if (logoBase64) {
+                logoXML = `<w:p>
+                    <w:r>
+                        <w:drawing>
+                            <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+                                <wp:extent cx="914400" cy="228600"/>
+                                <wp:docPr id="1" name="Logo"/>
+                                <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                                    <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                        <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                            <pic:nvPicPr>
+                                                <pic:cNvPr id="0" name="Logo"/>
+                                                <pic:cNvPicPr/>
+                                            </pic:nvPicPr>
+                                            <pic:blipFill>
+                                                <a:blip r:embed="rId1" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+                                                <a:stretch><a:fillRect/></a:stretch>
+                                            </pic:blipFill>
+                                            <pic:spPr>
+                                                <a:xfrm>
+                                                    <a:off x="0" y="0"/>
+                                                    <a:ext cx="914400" cy="228600"/>
+                                                </a:xfrm>
+                                                <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                                            </pic:spPr>
+                                        </pic:pic>
+                                    </a:graphicData>
+                                </a:graphic>
+                            </wp:inline>
+                        </w:drawing>
+                    </w:r>
+                </w:p>`;
+            }
+
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" 
+       xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+    ${logoXML}
     <w:tbl>
+        <w:tblPr>
+            <w:tblW w:w="5000" w:type="pct"/>
+            <w:tblBorders>
+                <w:top w:val="single" w:sz="4"/>
+                <w:left w:val="single" w:sz="4"/>
+                <w:bottom w:val="single" w:sz="4"/>
+                <w:right w:val="single" w:sz="4"/>
+                <w:insideH w:val="single" w:sz="4"/>
+                <w:insideV w:val="single" w:sz="4"/>
+            </w:tblBorders>
+        </w:tblPr>
+        <w:tblGrid>
+            <w:gridCol w:w="1000"/>
+            <w:gridCol w:w="3000"/>
+            <w:gridCol w:w="2000"/>
+        </w:tblGrid>
         <w:tr>
             <w:tc><w:p><w:r><w:t>    </w:t></w:r></w:p></w:tc>
             <w:tc><w:p><w:r><w:t>Job Description</w:t></w:r></w:p></w:tc>
-            <w:tc><w:p><w:r><w:t>Code: ${data.jobCode}</w:t></w:r></w:p></w:tc>
+            <w:tc><w:p><w:r><w:t>Code: ${escapeXML(data.jobCode)}</w:t></w:r></w:p></w:tc>
         </w:tr>
         <w:tr>
             <w:tc><w:p><w:r><w:t>    </w:t></w:r></w:p></w:tc>
@@ -1156,53 +1268,68 @@
         <w:tr>
             <w:tc><w:p><w:r><w:t>    </w:t></w:r></w:p></w:tc>
             <w:tc><w:p><w:r><w:t>Capacidad:5.5 Human Resources</w:t></w:r></w:p></w:tc>
-            <w:tc><w:p><w:r><w:t>Page: 1 de 1</w:t></w:r></w:p></w:tc>
+            <w:tc><w:p><w:r><w:t>Page: 1 de 2</w:t></w:r></w:p></w:tc>
         </w:tr>
     </w:tbl>
 </w:hdr>`;
         }
 
-        function createDocumentXML(data) {
-            // Format responsibilities and requirements as bullet points
+        function createExactFormatDocumentXML(data) {
+            // Format responsibilities and requirements
             const respLines = data.responsibilities.split('\n').filter(l => l.trim());
             const reqLines = data.requirements.split('\n').filter(l => l.trim());
 
             const respXML = respLines.map(line => {
-                const text = line.replace(/^[•\-\*]\s*/, '');
-                return `<w:p><w:pPr><w:pStyle w:val="ListParagraph"/></w:pPr><w:r><w:t>• ${escapeXML(text)}</w:t></w:r></w:p>`;
+                const text = line.replace(/^[•\-\*]\s*/, '').trim();
+                if (!text) return '';
+                return `<w:p><w:pPr><w:spacing w:before="60" w:after="60"/></w:pPr><w:r><w:t>• ${escapeXML(text)}</w:t></w:r></w:p>`;
             }).join('');
 
             const reqXML = reqLines.map(line => {
-                const text = line.replace(/^[•\-\*]\s*/, '');
-                return `<w:p><w:pPr><w:pStyle w:val="ListParagraph"/></w:pPr><w:r><w:t>• ${escapeXML(text)}</w:t></w:r></w:p>`;
+                const text = line.replace(/^[•\-\*]\s*/, '').trim();
+                if (!text) return '';
+                return `<w:p><w:pPr><w:spacing w:before="60" w:after="60"/></w:pPr><w:r><w:t>• ${escapeXML(text)}</w:t></w:r></w:p>`;
             }).join('');
 
+            // Create the marker line
+            const markerLine = data.clientCode 
+                ? `${escapeXML(data.clientCode)} - ${escapeXML(data.jobTitle)}`
+                : escapeXML(data.jobTitle);
+
             return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
     <w:body>
-        <w:p><w:r><w:t>Job Summary / Overview</w:t></w:r><w:r><w:t>${escapeXML(data.clientCode)} - ${escapeXML(data.jobTitle)}</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="120" w:after="120"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Reports to: ${escapeXML(data.reportsTo)}</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="60" w:after="60"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Contract: ${escapeXML(data.contract)}</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="60" w:after="60"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Grade: ${escapeXML(data.grade)}</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="60" w:after="120"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Travel Requirements: ${escapeXML(data.travel)}</w:t></w:r></w:p>
         
-        <w:p><w:r><w:t>Job Title: ${escapeXML(data.jobTitle)}</w:t></w:r></w:p>
-        <w:p><w:r><w:t>Department Project/Client: ${escapeXML(data.department)}</w:t></w:r></w:p>
-        <w:p><w:r><w:t>Location: ${escapeXML(data.location)}</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Job Summary / Overview</w:t></w:r><w:r><w:t>${markerLine}</w:t></w:r></w:p>
         
-        <w:p><w:pPr><w:spacing w:before="240"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Job Description</w:t></w:r></w:p>
-        <w:p><w:r><w:t>${escapeXML(data.jobDescription)}</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="120" w:after="60"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Job Title: ${escapeXML(data.jobTitle)}</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="60" w:after="60"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Department Project/Client: ${escapeXML(data.department)}</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="60" w:after="240"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Location: ${escapeXML(data.location)}</w:t></w:r></w:p>
         
-        <w:p><w:pPr><w:spacing w:before="240"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Essential Job Responsibilities</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>${escapeXML(data.jobDescription)}</w:t></w:r></w:p>
+        
+        <w:p><w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Key Responsibilities and Accountabilities (may perform other duties as requested not specifically addressed below)</w:t></w:r></w:p>
         ${respXML}
         
-        <w:p><w:pPr><w:spacing w:before="240"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Job Requirements</w:t></w:r></w:p>
+        <w:p><w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Main Job Requirements</w:t></w:r></w:p>
         ${reqXML}
         
         <w:sectPr>
-            <w:headerReference w:type="default" r:id="rId1" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+            <w:headerReference w:type="default" r:id="rId1"/>
+            <w:pgSz w:w="12240" w:h="15840"/>
+            <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/>
         </w:sectPr>
     </w:body>
 </w:document>`;
         }
 
         function escapeXML(text) {
+            if (!text) return '';
             return text
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
